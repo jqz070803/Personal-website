@@ -3,19 +3,21 @@
    基调：大量留白、冷峻蓝灰白配色、现代无衬线字体、轻阴影
    ========================================================= */
 
-/* ---------- 主题变量 ---------- */
+/* ---------- 主题变量（深色夜景基调，整页连贯） ---------- */
 :root {
-  --ink: #1d1d1f;            /* 主文字 */
-  --ink-soft: #3a3a3c;
-  --ink-faint: #6e6e73;      /* 次要文字 */
-  --paper: #ffffff;          /* 页面背景 */
-  --paper-soft: #f5f5f7;     /* 浅灰分区背景（Apple 常用） */
-  --card: #ffffff;
-  --line: rgba(0, 0, 0, 0.08);
-  --accent: #0a84ff;         /* Apple 系蓝 */
-  --accent-deep: #0066cc;
+  --ink: #f2f5fa;            /* 主文字（深色背景上为浅色） */
+  --ink-soft: #c6ccd6;
+  --ink-faint: #8b93a0;      /* 次要文字 */
+  --paper: #0a1424;          /* 页面前景基调（深空蓝黑） */
+  --paper-soft: #101d30;     /* 分区背景（比基调稍亮一档，保持连续） */
+  --card: #122036;           /* 卡片背景 */
+  --card-hi: #16263f;        /* 卡片 hover 高亮 */
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --accent: #4da3ff;         /* Apple 系蓝（深色下提亮一档） */
+  --accent-deep: #7cc0ff;
   --sky: #0b1f38;            /* 深空蓝 */
-  --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 24px 64px rgba(0, 0, 0, 0.42);
   --radius: 24px;
   --maxw: 1080px;
   --nav-h: 64px;
@@ -45,7 +47,23 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  position: relative;
 }
+
+/* 随滚动缓慢流动的背景层（深色基调内做色相/明度渐变，避免生硬跳色） */
+.bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--paper);
+  transition: background 0.6s ease;
+}
+body.is-scene-2 .bg-scene { background: linear-gradient(180deg, #0a1424 0%, #0d1c33 45%, #0a1a2e 100%); }
+body.is-scene-3 .bg-scene { background: linear-gradient(180deg, #0a1424 0%, #0e2038 40%, #0c2036 70%, #0a1a2e 100%); }
+body.is-scene-4 .bg-scene { background: linear-gradient(180deg, #0b1626 0%, #10263f 45%, #0d2238 100%); }
+body.is-scene-5 .bg-scene { background: linear-gradient(180deg, #0b1626 0%, #0f2740 60%, #0b1c31 100%); }
+body.is-scene-6 .bg-scene { background: linear-gradient(180deg, #0b1626 0%, #102039 50%, #0a1628 100%); }
 
 a {
   color: inherit;
@@ -77,6 +95,7 @@ b {
   background: var(--paper-soft);
   border-radius: calc(var(--radius) + 8px);
   max-width: calc(var(--maxw) + 0px);
+  border: 1px solid var(--line);
 }
 
 /* =========================================================
@@ -97,10 +116,10 @@ b {
 }
 
 .nav--scrolled {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(10, 20, 36, 0.72);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .nav__menu {
@@ -169,8 +188,8 @@ b {
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(120% 120% at 50% 0%, rgba(10, 132, 255, 0.18), transparent 60%),
-    linear-gradient(180deg, #081627 0%, #0d2136 55%, #0c1e31 100%);
+    radial-gradient(120% 120% at 50% 0%, rgba(77, 163, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, #071321 0%, #0d2136 55%, #0a1424 100%);
   /* TODO(v1): 替换为真实山川湖海照片背景，此处用干净的夜景渐变模拟 */
 }
 
@@ -398,12 +417,13 @@ b {
   border-radius: var(--radius);
   padding: clamp(28px, 3.6vw, 40px);
   box-shadow: var(--shadow-soft);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
 }
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.1);
-  border-color: rgba(10, 132, 255, 0.2);
+  box-shadow: 0 34px 80px rgba(0, 0, 0, 0.5);
+  border-color: rgba(77, 163, 255, 0.35);
+  background: var(--card-hi);
 }
 
 .card__title {
@@ -532,8 +552,8 @@ b {
   transition: background 0.3s, border-color 0.3s;
 }
 .stats__item:hover {
-  background: #fff;
-  border-color: var(--line);
+  background: var(--card-hi);
+  border-color: var(--line-strong);
 }
 .stats__num {
   display: block;
@@ -778,17 +798,59 @@ b {
 }
 
 /* =========================================================
-   滚动显现动效
+   滚动显现动效（支持上移 / 横向滑动 / 交错延迟）
    ========================================================= */
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transform: translateY(28px);
+  transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* 从左侧滑入 */
+.reveal[data-dir="left"] {
+  transform: translateX(-44px);
+}
+.reveal[data-dir="left"].is-visible {
+  transform: translateX(0);
+}
+/* 从右侧滑入 */
+.reveal[data-dir="right"] {
+  transform: translateX(44px);
+}
+.reveal[data-dir="right"].is-visible {
+  transform: translateX(0);
+}
+/* 轻微缩放上浮 */
+.reveal[data-dir="up"] {
+  transform: translateY(32px) scale(0.98);
+}
+.reveal[data-dir="up"].is-visible {
+  transform: translateY(0) scale(1);
+}
+
+/* 交错入场：为网格/卡片容器内子项延迟（由 data-stagger 启用） */
+[data-stagger] > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-stagger].is-visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-stagger].is-visible > *:nth-child(1) { transition-delay: 0.06s; }
+[data-stagger].is-visible > *:nth-child(2) { transition-delay: 0.16s; }
+[data-stagger].is-visible > *:nth-child(3) { transition-delay: 0.26s; }
+[data-stagger].is-visible > *:nth-child(4) { transition-delay: 0.36s; }
+[data-stagger].is-visible > *:nth-child(5) { transition-delay: 0.46s; }
+[data-stagger].is-visible > *:nth-child(6) { transition-delay: 0.56s; }
 
 /* =========================================================
    响应式 —— 手机端适配
@@ -803,7 +865,7 @@ b {
     left: 0;
     right: 0;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(10, 20, 36, 0.96);
     backdrop-filter: blur(20px);
     padding: 14px 24px 24px;
     gap: 4px;
@@ -823,7 +885,7 @@ b {
     width: 100%;
     text-align: center;
     padding: 12px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   .nav__link:last-child {
     border-bottom: 0;
@@ -905,6 +967,10 @@ html.shot .hero__mountains {
   }
 }
 html.shot .reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+html.shot [data-stagger] > * {
   opacity: 1;
   transform: translateY(0);
 }

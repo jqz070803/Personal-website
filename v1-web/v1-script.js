@@ -25,6 +25,30 @@
   window.addEventListener("scroll", onScrollNav, { passive: true });
   onScrollNav();
 
+  /* ---------- 滚动场景 / 背景色渐变 ----------
+     在几个深空色带之间，随滚动位置缓慢切换 body 的 scene 档位，
+     让背景颜色随鼠标下滑自然流动，而不是生硬跳变。 */
+  var docEl = document.body;
+  var sceneKeys = ["is-scene-2", "is-scene-3", "is-scene-4", "is-scene-5", "is-scene-6"];
+  window.addEventListener(
+    "scroll",
+    function () {
+      var scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+      var p = Math.min(window.scrollY / scrollable, 1); // 0..1
+      // 用非线性缓动，让背景前半段变化更细腻、后半段逐步沉静
+      var eased = p * (2 - p);
+      var idx = Math.min(Math.floor(eased * sceneKeys.length), sceneKeys.length - 1);
+      sceneKeys.forEach(function (k) {
+        docEl.classList.toggle(k, false);
+      });
+      if (idx > 0) {
+        docEl.classList.add(sceneKeys[idx - 1]);
+      }
+    },
+    { passive: true }
+  );
+
   /* ---------- 移动端汉堡菜单 ---------- */
   var burger = document.getElementById("navBurger");
   var menu = document.getElementById("navMenu");
