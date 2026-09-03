@@ -1,0 +1,12 @@
+# 依赖 / 临时 / 运行时
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# 预览与临时截图工作区
+.deepworks/tmp/
+
+# 上传的原始素材（不入库，仅源码引用）
+# uploads/ 默认忽略，若需版本管理可取消注释
+uploads/
