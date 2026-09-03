@@ -653,6 +653,57 @@ b {
 }
 
 /* =========================================================
+   我的技能 —— 趣味技能标签墙
+   ========================================================= */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.skill-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+.skill-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(77, 163, 255, 0.35);
+  background: var(--card-hi);
+}
+.skill-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: rgba(77, 163, 255, 0.12);
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.skill-card__icon svg {
+  width: 26px;
+  height: 26px;
+}
+  .skill-card__name {
+    font-size: 1.06rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 8px;
+    overflow-wrap: anywhere;
+  }
+  .skill-card__text {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--ink-faint);
+    overflow-wrap: anywhere;
+  }
+
+/* =========================================================
    社交 —— 三个紧凑的小模块
    ========================================================= */
 .social-grid {
@@ -976,6 +1027,12 @@ b {
   }
   .lens-card {
     text-align: left;
+  }
+
+  /* 技能：手机端双列（窄屏）→ 单列 */
+  .skill-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 
   /* 社交：手机端单列全宽小卡 */
