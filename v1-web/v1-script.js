@@ -130,15 +130,19 @@
     });
   }
 
-  /* ---------- 社交卡片占位跳转 ---------- */
+  /* ---------- 社交卡片跳转 ----------
+     B站 为真实链接（href 非 "#"），直接放行跳转；
+     抖音 / 视频号 为占位（href="#"），点击时给出占位提示。 */
   document.querySelectorAll(".social-card").forEach(function (card) {
+    var href = card.getAttribute("href") || "#";
+    if (href !== "#") {
+      return; // 真实链接：交给默认跳转
+    }
     card.addEventListener("click", function (e) {
       e.preventDefault();
       var platform = card.getAttribute("data-platform") || "外部链接";
-      var name = card.querySelector(".card__text") ? card.querySelector(".card__text").textContent.trim() : "";
       // 占位提示：后续可替换为真实主页链接
-      alert("这里是占位链接，后续会替换为「" + platform + "」的真实主页地址。");
-      console.log("占位链接", platform, name);
+      alert("《" + platform + "》链接暂未配置，后续会替换为你的真实主页。");
     });
   });
 })();
