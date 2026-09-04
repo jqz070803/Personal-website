@@ -146,83 +146,97 @@
     });
   });
 
-  /* ---------- 笔尖书写动效（[data-write]）----------
-     用一道柔和的"墨迹"前沿从左向右扫过标题，文字像被笔尖
-     一笔一画书写出来（随滚动推进；hero 大标题则在加载时书写）。
-     · 技术：CSS mask 线性渐变 + --write-progress 变量控制扫到哪，
-       无需拆分 DOM，中文/响应式 clamp 均安全；
-     · 截图模式（?shot=1）与减少动效偏好下直接整段显示。 */
+  /* ---------- 标题上浮渐显动效（[data-write]）----------
+     把标题文字拆成单个字符（保留空格与标点），
+     · hero 大标题：页面加载时按时间逐字上浮渐显；
+     · 各区块标题：随滚动进入视口时按滚动进度逐字上浮渐显。
+     截图模式（?shot=1）与减少动效偏好下直接整段显示。 */
   var writeEls = document.querySelectorAll("[data-write]");
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var writeItems = [];
 
+  function splitText(el) {
+    // 取文本（含空格），逐字符包一层 span，空白保留原样
+    var text = el.textContent || "";
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (/\s/.test(ch)) {
+        var ws = document.createElement("span");
+        ws.className = "write-char write-char--space";
+        ws.innerHTML = "&nbsp;";
+        frag.appendChild(ws);
+      } else {
+        var s = document.createElement("span");
+        s.className = "write-char";
+        s.textContent = ch;
+        frag.appendChild(s);
+      }
+    }
+    el.textContent = "";
+    el.appendChild(frag);
+    return el.querySelectorAll(".write-char:not(.write-char--space)");
+  }
+
   if (writeEls.length) {
     writeEls.forEach(function (el) {
-      writeItems.push({ el: el, progress: 0, done: false });
+      var chars = splitText(el);
+      writeItems.push({ el: el, chars: chars, written: 0, done: false });
     });
 
-    // 当前是否需要关闭动效（初始化时判定一次）
-    var writingDisabled = isShot || reduceMotion;
-
-    function applyProgress(item, p) {
-      p = Math.max(0, Math.min(1, p));
-      item.progress = p;
-      item.el.style.setProperty("--write-progress", (p * 100).toFixed(2) + "%");
-      if (p >= 1) item.done = true;
+    function revealCount(item, count) {
+      count = Math.max(0, Math.min(item.chars.length, Math.round(count)));
+      for (var i = item.written; i < count; i++) {
+        var c = item.chars[i];
+        if (c && !c.classList.contains("on")) c.classList.add("on");
+      }
+      item.written = Math.max(item.written, count);
+      if (count >= item.chars.length) item.done = true;
     }
 
     function writeAll(item) {
-      applyProgress(item, 1);
+      revealCount(item, item.chars.length);
     }
 
-    if (writingDisabled) {
-      // 截图 / 减少动效：全部直接写出（不挂 mask 类，保持完整可见）
-      writeItems.forEach(function (it) {
-        it.el.classList.remove("js-write-mask");
-        writeAll(it);
-      });
+    // 截图 / 减少动效：全部直接写出
+    if (isShot || reduceMotion) {
+      writeItems.forEach(writeAll);
     } else {
-      // 正常书写：给标题挂上 mask 类，随进度推进
-      writeItems.forEach(function (it) {
-        it.el.classList.add("js-write-mask");
-        applyProgress(it, 0);
-      });
-
       function applyScrollWrite() {
         var vh = window.innerHeight;
         writeItems.forEach(function (item) {
           if (item.done) return;
           if (item.el.classList.contains("hero__title")) return; // hero 走时间轴
           var rect = item.el.getBoundingClientRect();
-          // 已滚过视口上方 -> 全部写完
+          // 溢出视口顶部(已滚过) -> 全部写出
           if (rect.top <= vh * 0.3) {
             writeAll(item);
             return;
           }
-          // 尚未进入视口 -> 未开始
+          // 底部进入视口 -> 开始写
           if (rect.top > vh) {
-            applyProgress(item, 0);
+            revealCount(item, 0);
             return;
           }
-          // 从视口下方进入，到 30% 高度处写满：映射为滚动进度
+          // 在该区间内按滚动进度写出
           var p = (vh - rect.top) / (vh - vh * 0.3); // 0..1
-          applyProgress(item, p);
+          p = Math.max(0, Math.min(1, p));
+          revealCount(item, p * item.chars.length);
         });
       }
 
-      // hero 大标题：加载时用时间轴书写（柔和的由慢渐快）
-      var heroItem = null;
-      writeItems.forEach(function (it) {
-        if (it.el.classList.contains("hero__title")) heroItem = it;
-      });
-      if (heroItem) {
+      // hero 时间轴书写：从底部逐一上浮渐显
+      var heroItem = writeItems.filter(function (it) {
+        return it.el.classList.contains("hero__title");
+      })[0];
+      if (heroItem && heroItem.chars.length) {
         var start = null;
-        var dur = 1700;
+        var dur = 1600;
         function tick(ts) {
           if (!start) start = ts;
           var p = Math.min((ts - start) / dur, 1);
           var eased = 1 - Math.pow(1 - p, 3); // ease-out
-          applyProgress(heroItem, eased);
+          revealCount(heroItem, eased * heroItem.chars.length);
           if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
@@ -231,6 +245,109 @@
       window.addEventListener("scroll", applyScrollWrite, { passive: true });
       window.addEventListener("resize", applyScrollWrite, { passive: true });
       applyScrollWrite();
+    }
+  }
+
+  /* ---------- About 简介屏：单笔连笔手写 "About me" ----------
+     SVG 幽灵淡线整词显示，墨迹按笔顺用 stroke-dashoffset 逐笔写出，
+     笔尖用 getPointAtLength 跟随当前书写点（正序写完）。
+     数据来自 v1-about-data.js (window.ABOUT_STROKES)，含 9 个连续笔画。
+     截图 / 减少动效：直接显示完整墨迹。 */
+  var aboutStrokes = window.ABOUT_STROKES;
+  if (aboutStrokes && aboutStrokes.strokeD && aboutStrokes.strokeD.length) {
+    var inkEl = document.getElementById("wordInk");
+    var penEl = document.getElementById("wordPen");
+    var ghostEl = document.getElementById("wordGhost");
+    var aboutSection = document.getElementById("about-screen");
+
+    if (inkEl && penEl && ghostEl && aboutSection) {
+      var NS = "http://www.w3.org/2000/svg";
+      // 幽灵预描：整词淡线（按笔顺组，全部显示作全貌提示）
+      aboutStrokes.strokeD.forEach(function (d) {
+        var p = document.createElementNS(NS, "path");
+        p.setAttribute("d", d);
+        p.setAttribute("class", "word-ghost");
+        p.setAttribute("fill", "none");
+        ghostEl.appendChild(p);
+      });
+      // 构建墨迹 SVG：把每笔作为独立 path，累积长度以支持正序(笔顺)书写
+      var inkGroup = inkEl;
+      var strokePaths = aboutStrokes.strokeD.map(function (d) {
+        var p = document.createElementNS(NS, "path");
+        p.setAttribute("d", d);
+        p.setAttribute("class", "word-ink");
+        p.setAttribute("fill", "none");
+        inkGroup.appendChild(p);
+        return p;
+      });
+
+      // 测量每笔长度 + 累计起点
+      var lens = strokePaths.map(function (p) { return p.getTotalLength(); });
+      var totalLen = lens.reduce(function (a, b) { return a + b; }, 0);
+      var starts = [];
+      var acc = 0;
+      var i;
+      for (i = 0; i < lens.length; i++) { starts.push(acc); acc += lens[i]; }
+
+      // 全局进度 t in [0,1] -> 每笔的 dashoffset（正序写出，非整词同时泄出）
+      function render(t) {
+        var g = t * totalLen;
+        for (var k = 0; k < strokePaths.length; k++) {
+          var L = lens[k];
+          strokePaths[k].style.strokeDasharray = L + " " + L;
+          strokePaths[k].style.strokeDashoffset = L - Math.max(0, Math.min(L, g - starts[k]));
+        }
+        // 笔尖定位：找到当前所处笔画
+        var idx = lens.length - 1;
+        for (var m = 0; m < lens.length; m++) {
+          if (g < starts[m] + lens[m]) { idx = m; break; }
+        }
+        var local = Math.max(0, Math.min(lens[idx], g - starts[idx]));
+        var pt = strokePaths[idx].getPointAtLength(local);
+        penEl.setAttribute("cx", pt.x);
+        penEl.setAttribute("cy", pt.y);
+        penEl.setAttribute("r", "6");
+      }
+
+      // 截图 / 减少动效：完整显示 + 隐藏笔尖
+      if (isShot || reduceMotion) {
+        render(1);
+        penEl.style.opacity = 0;
+      } else {
+        var aboutDone = false;
+        var dur = 2200;
+        function animateAbout() {
+          if (aboutDone) return;
+          var start = null;
+          function frame(now) {
+            if (aboutDone) return;
+            if (start === null) start = now;
+            var p = Math.min((now - start) / dur, 1);
+            var eased = 1 - Math.pow(1 - p, 3); // ease-out
+            render(eased);
+            if (p < 1) {
+              requestAnimationFrame(frame);
+            } else {
+              aboutDone = true;
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        // 进入视口即触发书写
+        if ("IntersectionObserver" in window) {
+          var aboutObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                animateAbout();
+                aboutObserver.disconnect();
+              }
+            });
+          }, { threshold: 0.35 });
+          aboutObserver.observe(aboutSection);
+        } else {
+          render(1);
+        }
+      }
     }
   }
 })();

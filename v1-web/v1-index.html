@@ -87,6 +87,24 @@
       </div>
     </section>
 
+    <!-- ============ About 简介屏（单笔连笔手写 "About me"） ============ -->
+    <section class="about-screen" id="about-screen">
+      <div class="about-screen__bg" aria-hidden="true"></div>
+      <div class="about-screen__inner">
+        <p class="about-screen__eyebrow">ABOUT · ME</p>
+        <!-- 手写单词：SVG 单笔画路径 + 幽灵预描 + 笔尖跟随 -->
+        <div class="about-screen__word" aria-label="About me">
+          <svg class="word-svg" viewBox="0 0 1000 260" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <g class="word-ghost" id="wordGhost"></g>
+            <g class="word-ink" id="wordInk"></g>
+            <circle class="word-pen" id="wordPen" r="0" />
+          </svg>
+        </div>
+        <p class="about-screen__line">一笔一划，都是我与世界的对话。</p>
+        <div class="about-screen__scroll" aria-hidden="true"><span></span></div>
+      </div>
+    </section>
+
     <!-- ============ 关于我 ============ -->
     <section class="section" id="about">
       <div class="section__head reveal">
@@ -440,6 +458,7 @@
     </p>
   </footer>
 
+  <script src="v1-about-data.js"></script>
   <script src="v1-script.js"></script>
 </body>
 </html>

@@ -365,6 +365,125 @@ b {
 }
 
 /* =========================================================
+   About 简介屏 —— 全屏 · 单笔连笔手写 "About me"
+   ========================================================= */
+.about-screen {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  overflow: hidden;
+  padding: calc(var(--nav-h) + 24px) 24px 40px;
+}
+
+.about-screen__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(120% 90% at 50% 10%, rgba(10, 132, 255, 0.16), transparent 60%),
+    linear-gradient(180deg, #071321 0%, #0b1f38 55%, #08141f 100%);
+}
+
+.about-screen__inner {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 920px);
+  margin: 0 auto;
+}
+
+.about-screen__eyebrow {
+  font-size: clamp(0.8rem, 1.7vw, 0.96rem);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: clamp(30px, 6vw, 56px);
+  font-weight: 500;
+}
+
+.about-screen__word {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.word-svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* 幽灵预描：整词淡线，提示即将写出的全貌 */
+.word-ghost {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 墨迹路径：由 JS 按笔顺逐笔拉出 */
+.word-ink {
+  fill: none;
+  stroke: #f6f1e6;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 笔尖：跟随书写点发光 */
+.word-pen {
+  fill: #ffb347;
+  filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.85));
+  transition: r 0.2s ease;
+}
+
+.about-screen__line {
+  max-width: 440px;
+  margin: clamp(34px, 5vw, 48px) auto 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+
+.about-screen__scroll {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 44px;
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-radius: 14px;
+}
+.about-screen__scroll span {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 4px;
+  height: 9px;
+  margin-left: -2px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  animation: scrollDown 1.8s infinite;
+}
+
+/* 截图 / 预览模式：直接显示完整墨迹，隐藏笔尖 */
+html.shot .about-screen {
+  min-height: 60vh;
+}
+html.shot .word-ink {
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+html.shot .word-pen {
+  opacity: 0;
+}
+
+/* =========================================================
    区块标题
    ========================================================= */
 .section__head {
@@ -1079,35 +1198,59 @@ html.shot [data-stagger] > * {
 }
 
 /* =========================================================
-   笔尖书写动效（[data-write]）
-   用一道柔软的"墨迹"前沿从左向右扫过，文字像被笔尖书写出来；
-   随滚动推进（hero 标题则在加载时书写）。中文/响应式 clamp 均安全，
-   无 JS 时保持完整可见（渐进增强）。截图与减少动效下关闭。
+   标题上浮渐显动效（[data-write]）
+   把标题拆成单字，随滚动进度逐字上浮渐显（hero 大标题则加载时书写）。
+   中文/响应式 clamp 均安全，无 JS 时保持完整可见（渐进增强）。
    ========================================================= */
-.js-write-mask {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    #000 0%,
-    #000 var(--write-progress, 0%),
-    rgba(0, 0, 0, 0) calc(var(--write-progress, 0%) + 20%),
-    rgba(0, 0, 0, 0) 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    #000 0%,
-    #000 var(--write-progress, 0%),
-    rgba(0, 0, 0, 0) calc(var(--write-progress, 0%) + 20%),
-    rgba(0, 0, 0, 0) 100%
-  );
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+.write-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.55em);
+  filter: blur(7px);
+  will-change: opacity, transform, filter;
+}
+.write-char.on {
+  animation: writeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes writeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.55em);
+    filter: blur(7px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0.02em);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+/* 截图/预览 / 减少动效时直接全部写完全部文字 */
+html.shot .write-char {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  animation: none;
 }
 
 /* ---------- 减少动效偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .js-write-mask {
-    -webkit-mask-image: none;
-    mask-image: none;
+  .write-char {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+    animation: none;
+  }
+  .word-ink {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .word-pen {
+    opacity: 0;
   }
   * {
     animation-duration: 0.001ms !important;
