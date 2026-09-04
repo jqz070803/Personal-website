@@ -97,7 +97,10 @@
           <svg class="word-svg" viewBox="0 0 1000 260" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
             <g class="word-ghost" id="wordGhost"></g>
             <g class="word-ink" id="wordInk"></g>
-            <circle class="word-pen" id="wordPen" r="0" />
+            <!-- 笔尖：小纸飞机（JS 沿笔画方向旋转跟随；几何居中于原点便于旋转） -->
+            <g class="word-pen" id="wordPen" aria-hidden="true">
+              <path d="M9 0 L-7 -6 L-2 0 L-7 6 Z" />
+            </g>
           </svg>
         </div>
         <p class="about-screen__line">一笔一划，都是我与世界的对话。</p>

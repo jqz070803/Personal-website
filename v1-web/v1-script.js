@@ -297,16 +297,17 @@
           strokePaths[k].style.strokeDasharray = L + " " + L;
           strokePaths[k].style.strokeDashoffset = L - Math.max(0, Math.min(L, g - starts[k]));
         }
-        // 笔尖定位：找到当前所处笔画
+        // 笔尖定位：找到当前所处笔画，并让纸飞机朝向书写方向
         var idx = lens.length - 1;
         for (var m = 0; m < lens.length; m++) {
           if (g < starts[m] + lens[m]) { idx = m; break; }
         }
         var local = Math.max(0, Math.min(lens[idx], g - starts[idx]));
         var pt = strokePaths[idx].getPointAtLength(local);
-        penEl.setAttribute("cx", pt.x);
-        penEl.setAttribute("cy", pt.y);
-        penEl.setAttribute("r", "9");
+        // 取前方一点求方向角（纸飞机机头朝前进方向）
+        var ahead = strokePaths[idx].getPointAtLength(Math.min(lens[idx], local + 2));
+        var ang = Math.atan2(ahead.y - pt.y, ahead.x - pt.x) * 180 / Math.PI;
+        penEl.setAttribute("transform", "translate(" + pt.x + " " + pt.y + ") rotate(" + ang + ")");
       }
 
       // 截图 / 减少动效：完整显示 + 隐藏笔尖
