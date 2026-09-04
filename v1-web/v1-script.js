@@ -147,96 +147,82 @@
   });
 
   /* ---------- 笔尖书写动效（[data-write]）----------
-     把标题文字拆成单个字符（保留空格与标点），
-     · hero 大标题：页面加载时按时间逐字写出；
-     · 各区块标题：随滚动进入视口时按滚动进度逐字写出。
-     截图模式（?shot=1）与减少动效偏好下直接整段显示。 */
+     用一道柔和的"墨迹"前沿从左向右扫过标题，文字像被笔尖
+     一笔一画书写出来（随滚动推进；hero 大标题则在加载时书写）。
+     · 技术：CSS mask 线性渐变 + --write-progress 变量控制扫到哪，
+       无需拆分 DOM，中文/响应式 clamp 均安全；
+     · 截图模式（?shot=1）与减少动效偏好下直接整段显示。 */
   var writeEls = document.querySelectorAll("[data-write]");
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var writeItems = [];
 
-  function splitText(el) {
-    // 取文本（含空格），逐字符包一层 span，空白保留原样
-    var text = el.textContent || "";
-    var frag = document.createDocumentFragment();
-    for (var i = 0; i < text.length; i++) {
-      var ch = text[i];
-      if (/\s/.test(ch)) {
-        var ws = document.createElement("span");
-        ws.className = "write-char write-char--space";
-        ws.innerHTML = "&nbsp;";
-        frag.appendChild(ws);
-      } else {
-        var s = document.createElement("span");
-        s.className = "write-char";
-        s.textContent = ch;
-        frag.appendChild(s);
-      }
-    }
-    el.textContent = "";
-    el.appendChild(frag);
-    return el.querySelectorAll(".write-char:not(.write-char--space)");
-  }
-
   if (writeEls.length) {
     writeEls.forEach(function (el) {
-      var chars = splitText(el);
-      writeItems.push({ el: el, chars: chars, written: 0, done: false });
+      writeItems.push({ el: el, progress: 0, done: false });
     });
 
-    function revealCount(item, count) {
-      count = Math.max(0, Math.min(item.chars.length, Math.round(count)));
-      for (var i = item.written; i < count; i++) {
-        var c = item.chars[i];
-        if (c && !c.classList.contains("on")) c.classList.add("on");
-      }
-      item.written = Math.max(item.written, count);
-      if (count >= item.chars.length) item.done = true;
+    // 当前是否需要关闭动效（初始化时判定一次）
+    var writingDisabled = isShot || reduceMotion;
+
+    function applyProgress(item, p) {
+      p = Math.max(0, Math.min(1, p));
+      item.progress = p;
+      item.el.style.setProperty("--write-progress", (p * 100).toFixed(2) + "%");
+      if (p >= 1) item.done = true;
     }
 
     function writeAll(item) {
-      revealCount(item, item.chars.length);
+      applyProgress(item, 1);
     }
 
-    // 截图 / 减少动效：全部直接写出
-    if (isShot || reduceMotion) {
-      writeItems.forEach(writeAll);
+    if (writingDisabled) {
+      // 截图 / 减少动效：全部直接写出（不挂 mask 类，保持完整可见）
+      writeItems.forEach(function (it) {
+        it.el.classList.remove("js-write-mask");
+        writeAll(it);
+      });
     } else {
-      // 期待字体加载完再拆分，避免字体度量影响观感（文本拆分与字体无关，此处理性等待引擎稳定）
+      // 正常书写：给标题挂上 mask 类，随进度推进
+      writeItems.forEach(function (it) {
+        it.el.classList.add("js-write-mask");
+        applyProgress(it, 0);
+      });
+
       function applyScrollWrite() {
         var vh = window.innerHeight;
         writeItems.forEach(function (item) {
+          if (item.done) return;
           if (item.el.classList.contains("hero__title")) return; // hero 走时间轴
           var rect = item.el.getBoundingClientRect();
-          // 溢出视口顶部(已滚过) -> 全部完成
+          // 已滚过视口上方 -> 全部写完
           if (rect.top <= vh * 0.3) {
             writeAll(item);
             return;
           }
-          // 底部进入视口 -> 开始写
+          // 尚未进入视口 -> 未开始
           if (rect.top > vh) {
-            revealCount(item, 0);
+            applyProgress(item, 0);
             return;
           }
-          // 在该区间内按滚动进度写出
+          // 从视口下方进入，到 30% 高度处写满：映射为滚动进度
           var p = (vh - rect.top) / (vh - vh * 0.3); // 0..1
-          p = Math.max(0, Math.min(1, p));
-          revealCount(item, p * item.chars.length);
+          applyProgress(item, p);
         });
       }
 
-      // hero 时间轴书写
-      var heroItem = writeItems.filter(function (it) {
-        return it.el.classList.contains("hero__title");
-      })[0];
-      if (heroItem && heroItem.chars.length) {
+      // hero 大标题：加载时用时间轴书写（柔和的由慢渐快）
+      var heroItem = null;
+      writeItems.forEach(function (it) {
+        if (it.el.classList.contains("hero__title")) heroItem = it;
+      });
+      if (heroItem) {
         var start = null;
-        var dur = 1600;
+        var dur = 1700;
         function tick(ts) {
           if (!start) start = ts;
           var p = Math.min((ts - start) / dur, 1);
           var eased = 1 - Math.pow(1 - p, 3); // ease-out
-          revealCount(heroItem, eased * heroItem.chars.length);
+          applyProgress(heroItem, eased);
           if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
