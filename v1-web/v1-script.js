@@ -145,4 +145,106 @@
       alert("《" + platform + "》链接暂未配置，后续会替换为你的真实主页。");
     });
   });
+
+  /* ---------- 笔尖书写动效（[data-write]）----------
+     把标题文字拆成单个字符（保留空格与标点），
+     · hero 大标题：页面加载时按时间逐字写出；
+     · 各区块标题：随滚动进入视口时按滚动进度逐字写出。
+     截图模式（?shot=1）与减少动效偏好下直接整段显示。 */
+  var writeEls = document.querySelectorAll("[data-write]");
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var writeItems = [];
+
+  function splitText(el) {
+    // 取文本（含空格），逐字符包一层 span，空白保留原样
+    var text = el.textContent || "";
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (/\s/.test(ch)) {
+        var ws = document.createElement("span");
+        ws.className = "write-char write-char--space";
+        ws.innerHTML = "&nbsp;";
+        frag.appendChild(ws);
+      } else {
+        var s = document.createElement("span");
+        s.className = "write-char";
+        s.textContent = ch;
+        frag.appendChild(s);
+      }
+    }
+    el.textContent = "";
+    el.appendChild(frag);
+    return el.querySelectorAll(".write-char:not(.write-char--space)");
+  }
+
+  if (writeEls.length) {
+    writeEls.forEach(function (el) {
+      var chars = splitText(el);
+      writeItems.push({ el: el, chars: chars, written: 0, done: false });
+    });
+
+    function revealCount(item, count) {
+      count = Math.max(0, Math.min(item.chars.length, Math.round(count)));
+      for (var i = item.written; i < count; i++) {
+        var c = item.chars[i];
+        if (c && !c.classList.contains("on")) c.classList.add("on");
+      }
+      item.written = Math.max(item.written, count);
+      if (count >= item.chars.length) item.done = true;
+    }
+
+    function writeAll(item) {
+      revealCount(item, item.chars.length);
+    }
+
+    // 截图 / 减少动效：全部直接写出
+    if (isShot || reduceMotion) {
+      writeItems.forEach(writeAll);
+    } else {
+      // 期待字体加载完再拆分，避免字体度量影响观感（文本拆分与字体无关，此处理性等待引擎稳定）
+      function applyScrollWrite() {
+        var vh = window.innerHeight;
+        writeItems.forEach(function (item) {
+          if (item.el.classList.contains("hero__title")) return; // hero 走时间轴
+          var rect = item.el.getBoundingClientRect();
+          // 溢出视口顶部(已滚过) -> 全部完成
+          if (rect.top <= vh * 0.3) {
+            writeAll(item);
+            return;
+          }
+          // 底部进入视口 -> 开始写
+          if (rect.top > vh) {
+            revealCount(item, 0);
+            return;
+          }
+          // 在该区间内按滚动进度写出
+          var p = (vh - rect.top) / (vh - vh * 0.3); // 0..1
+          p = Math.max(0, Math.min(1, p));
+          revealCount(item, p * item.chars.length);
+        });
+      }
+
+      // hero 时间轴书写
+      var heroItem = writeItems.filter(function (it) {
+        return it.el.classList.contains("hero__title");
+      })[0];
+      if (heroItem && heroItem.chars.length) {
+        var start = null;
+        var dur = 1600;
+        function tick(ts) {
+          if (!start) start = ts;
+          var p = Math.min((ts - start) / dur, 1);
+          var eased = 1 - Math.pow(1 - p, 3); // ease-out
+          revealCount(heroItem, eased * heroItem.chars.length);
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+
+      window.addEventListener("scroll", applyScrollWrite, { passive: true });
+      window.addEventListener("resize", applyScrollWrite, { passive: true });
+      applyScrollWrite();
+    }
+  }
 })();

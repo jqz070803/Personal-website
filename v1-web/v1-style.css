@@ -1078,8 +1078,54 @@ html.shot [data-stagger] > * {
   transform: translateY(0);
 }
 
+/* =========================================================
+   笔尖书写动效（[data-write]）
+   把标题拆成单字，随滚动进度逐字"写"出来（像钢笔落墨），
+   hero 大标题则在页面加载时书写。中文/响应式 clamp 均安全。
+   ========================================================= */
+.write-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.55em);
+  filter: blur(7px);
+  will-change: opacity, transform, filter;
+}
+.write-char.on {
+  animation: writeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes writeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.55em);
+    filter: blur(7px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0.02em);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+/* 截图/预览 / 减少动效时直接全部写完全部文字 */
+html.shot .write-char {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  animation: none;
+}
+
 /* ---------- 减少动效偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .write-char {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+    animation: none;
+  }
   * {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
