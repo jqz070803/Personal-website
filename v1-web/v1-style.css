@@ -415,20 +415,20 @@ b {
   overflow: visible;
 }
 
-/* 幽灵预描：整词淡线，提示即将写出的全貌 */
+/* 幽灵预描：整词淡线（提示即将写出的全貌） */
 .word-ghost {
   fill: none;
   stroke: rgba(255, 255, 255, 0.1);
-  stroke-width: 3;
+  stroke-width: 7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* 墨迹路径：由 JS 按笔顺逐笔拉出 */
+/* 墨迹路径：由 JS 按笔顺逐笔拉出（加粗 + 圆头圆角，更接近真实笔触） */
 .word-ink {
   fill: none;
   stroke: #f6f1e6;
-  stroke-width: 3;
+  stroke-width: 7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }

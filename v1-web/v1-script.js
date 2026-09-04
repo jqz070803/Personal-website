@@ -306,7 +306,7 @@
         var pt = strokePaths[idx].getPointAtLength(local);
         penEl.setAttribute("cx", pt.x);
         penEl.setAttribute("cy", pt.y);
-        penEl.setAttribute("r", "6");
+        penEl.setAttribute("r", "9");
       }
 
       // 截图 / 减少动效：完整显示 + 隐藏笔尖
