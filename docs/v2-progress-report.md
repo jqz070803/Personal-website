@@ -510,3 +510,56 @@ artifacts/
 ### ⚠️ 时间码踩坑（写给下一位）
 - 早先那张 `_inspect/winA.png` 的烧入时间码是**相对** `-ss` 起点的，比真实时间**少 4s**（标签 00:00:08 实际是源 00:00:12）。
 - 本文所有时间码均为**源绝对秒数**，来自 `.deepworks/tmp/vtest/mksheet.ps1` 生成的**无字** contact sheet（按 `Start + (row*Cols+col)*Step` 推算，不烧字 → 不需要字体、不需要任何系统目录权限）。
+
+---
+
+## v2 · 追加迭代同日（第五次：01 关于右栏空白真 bug + 首屏文案/标签 + 社交占位卡处置）
+
+### 🐞 真 bug：01「关于我」右栏三张卡片永久不可见（本轮修复）
+
+**用户反馈**：01 关于板块右侧一栏是空白的。
+
+**根因**（探针实测确认，**不是**样式表缓存问题）
+- `v2-index.html` 写的是 `<div class="about-info" data-stagger reveal>` —— `reveal` 被写成了**裸属性**，不是类名。
+- 于是 `.reveal` 选择器**永远匹配不到**它 → IntersectionObserver 从不观察它 → `.is-visible` 永不加 →
+  `[data-stagger].is-visible > *` 的揭示规则永不成立 → 三张卡片永久停在 `opacity:0; translateY(24px)`。
+- 全页共 18 处 `class="… reveal"`，**只有这 1 处写错**；其余 4 个 stagger 容器（`study-grid` / `grid--three` / `skill-grid` / `social-grid`）子项均正常。
+
+**修复**：`class="about-info" data-stagger reveal` → `class="about-info reveal" data-stagger`（只挪了这一个词）。
+
+**证据**（`.deepworks/tmp/seam.html?probe=1&pys=1800` → `.deepworks/tmp/hero-report.txt`）
+
+| 元素 | 修复前 | 修复后 |
+| :-- | :-- | :-- |
+| `div.about-info`（`.reveal`） | `is-visible` 未加，`vis=false` | `vis=true`（已加 `is-visible`） |
+| 3 × `div.card.about-card` | `opacity:0`、`translateY(24px)` | **`opacity:1`、`translateY(0)`** |
+
+实拍：`.deepworks/tmp/r5-about-desktop.png`（「一处坐标 / 一个灵魂 / 科研 · 获奖成果」三张卡片全部显示）。
+
+**教训**：`reveal` 与 `class="reveal"` 在源码里只差几个字符，但前者是**没有任何效果的裸属性**。
+排查"内容明明写了却看不到"时，除了查样式表缓存，**还要确认选择器是否真的匹配到了** —— 用探针跑 `getComputedStyle` 看数字，别靠肉眼。
+
+### ✍️ 首屏文案与标签（用户要求）
+- 标签行新增 **「智能医学工程在读」并排在首位**（与「旅行摄影 / 航拍 / 剪辑 / 乐于助人」同级）；
+- 副标题第二行 `用镜头定格每一帧转瞬即逝的美好。` → **`也在大一，把课表上的每一门基础课啃成自己的底气。`**
+  （用户原话："换成和我的学习状态相关的话，不要给人的感觉是我只会玩"）；
+- 上方小字改为 `现代徐霞客 · 天津大学（深圳）`，避免与新标签「智能医学工程在读」重复（用户选定）。
+
+### 🀄 中文断行修复（移动端真问题）
+- 新文案 24 字，390px 下列宽不够，被浏览器按字断行 → 出现 **「…每一门基础课啃成自 / 己的底气。」**：`自己` 被拦腰截断，且末行只剩 3 字（孤行）。
+- 修复：加 `<br class="hero__br--m" />` —— **窄屏专用换行**，在词组边界断开，仅在 `@media (max-width:560px)` 生效；桌面端 `display:none`，不影响单行排版。
+- 结果：390px / 480px 均为干净三行（`…每一门基础课` ⏎ `啃成自己的底气。`），1440px 仍单行、无回归。
+
+### 🔗 06 社交：占位卡片改为"不可点"
+- 抖音 / 视频号 原为 `href="#"`，点击会弹出**原生 `alert`**（"链接暂未配置"）——体验差、像半成品。
+- 处置（用户选定"暂时改成不可点"）：`<a href="#">` → **`<div class="social-card social-card--soon">`**，
+  右侧箭头 `→` → **「筹备中」小圆标**；新增 `.social-card--soon` 关掉 hover 上浮/配色变化（不再暗示"能点"）。
+- B站 保持真实链接与 `→` 箭头不变；同时**删掉已失效的 JS 占位弹窗拦截**（否则它会误绑到新的 `div` 上再次弹窗）。
+- 待办：拿到抖音 / 视频号主页链接后，把 `div` 换回 `a`、去掉 `--soon`、把「筹备中」换回 `→`。
+
+### 🀄 标点
+- 04 镜头「航拍」卡：`"上帝之眼"` 直角引号 → 中文弯引号 `“上帝之眼”`（全站直角引号清零）。
+
+### 验证
+- 探针断言（上表）+ 真实时间截图 1440×900 / 480×844 / 390×844（`.deepworks/tmp/r5-*`、`r6-*`、`r7-*`）。
+- 改动同时把 `v2-index.html` 的 `<link>`/`<script>` 版本号 `?v=4` → **`?v=6`**（含 CSS 改动，见 `project-continuity.md` §6）。

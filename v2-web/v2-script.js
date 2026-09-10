@@ -130,21 +130,10 @@
     });
   }
 
-  /* ---------- 社交卡片跳转 ----------
-     B站 为真实链接（href 非 "#"），直接放行跳转；
-     抖音 / 视频号 为占位（href="#"），点击时给出占位提示。 */
-  document.querySelectorAll(".social-card").forEach(function (card) {
-    var href = card.getAttribute("href") || "#";
-    if (href !== "#") {
-      return; // 真实链接：交给默认跳转
-    }
-    card.addEventListener("click", function (e) {
-      e.preventDefault();
-      var platform = card.getAttribute("data-platform") || "外部链接";
-      // 占位提示：后续可替换为真实主页链接
-      alert("《" + platform + "》链接暂未配置，后续会替换为你的真实主页。");
-    });
-  });
+  /* ---------- 社交卡片 ----------
+     B站 为真实链接，直接放行跳转；
+     抖音 / 视频号 的主页链接尚未就绪，已在 HTML 里做成不可点的卡片
+     （不带 href 的 div + 「筹备中」标注），因此这里不再需要占位弹窗拦截。 */
 
   /* ---------- 标题上浮渐显动效（[data-write]）----------
      把标题文字拆成单个字符（保留空格与标点），

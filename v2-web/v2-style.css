@@ -349,6 +349,16 @@ b {
   color: #a7ccff;
   font-weight: 500;
 }
+/* 窄屏专用换行：中文按词组断开，避免"自己"这类词被拦腰截断、
+   末行只剩两三个字（桌面端隐藏，不影响单行排版）。 */
+.hero__br--m {
+  display: none;
+}
+@media (max-width: 560px) {
+  .hero__br--m {
+    display: inline;
+  }
+}
 
 .hero__tags {
   display: flex;
@@ -1145,6 +1155,28 @@ html.shot .word-pen {
 .social-card:hover .social-card__arrow {
   transform: translateX(5px);
   color: var(--accent);
+}
+/* 主页链接尚未就绪的平台：卡片只作展示，不可点、不上浮、不出现跳转箭头，
+   避免"看着能点、点了没反应"的误导（也避免误点跳回页顶）。 */
+.social-card--soon {
+  cursor: default;
+}
+.social-card--soon:hover {
+  transform: none;
+  border-color: var(--line);
+  background: var(--card);
+}
+.social-card__soon {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
 }
 
 /* =========================================================

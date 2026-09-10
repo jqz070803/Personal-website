@@ -135,8 +135,13 @@ artifacts/
   （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
   ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 - **⚠️「改了却看不见」→ 先怀疑样式表缓存**：浏览器对 `v2-style.css` 走 HTTP 缓存，而加在**页面 URL 上的 `?v=xxx` 只能刷新 HTML，刷不到 CSS**。
-  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=4`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
-  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=4"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=6`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
+  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=6"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+- **⚠️「写了却看不见」不都是缓存问题 → 还要查选择器是否真的匹配**：01 关于右栏空白就是 `reveal` 写成了**裸属性**
+  （`<div class="about-info" data-stagger reveal>`），`.reveal` 压根匹配不到 → IntersectionObserver 不观察 → `[data-stagger].is-visible > *` 的揭示规则永不生效 → 子项永久 `opacity:0`。
+  查法：`.deepworks/tmp/seam.html?probe=1&pys=<滚动位置>&psel=<选择器>`，把 `getComputedStyle` 的 `opacity / transform / classList` POST 回 `hero-report.txt` 看数字，**别靠肉眼**。
+- **中文断行（窄屏）**：长文案在窄屏被按字断行时会出现"`自己`被拆成两行"这类难看断点、或末行孤字。
+  修法是插一个**窄屏专用换行** `<br class="hero__br--m" />`（默认 `display:none`，`@media (max-width:560px){ display:inline }`），在**词组边界**断开；桌面端不受影响。
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
@@ -157,8 +162,13 @@ artifacts/
       **首屏→第二页接缝已修复**：真实时间逐行扫描发现 9.49 的行间台阶（山峦剪影 `#050D19` vs 第二页顶色 `#06182D~#062039`，
       属旧版遗留、与视频无关），已在 `.about-screen__bg::before` 压同色 140px 渐隐窄带 → **9.49 → 0.89**（桌面/移动均 PASS）。
       ⚠️ 注意：`.hero__veil` 在 DOM 里位于山峦**之下**，所以"遮罩底部 `#08131f`"只保证剪影**以上**区域与天幕同色，管不到首屏最底那一行。
+  6. **收尾打磨（用户本轮确认范围）**：
+     ① 修掉 01 关于右栏空白的**真 bug** —— `class="about-info" data-stagger reveal` 里的 `reveal` 是裸属性，改为 `class="about-info reveal"`，三张卡片恢复可见；
+     ② 首屏标签行新增 **「智能医学工程在读」**（排首位），副标题第二行改为 **「也在大一，把课表上的每一门基础课啃成自己的底气。」**，上方小字改 **「现代徐霞客 · 天津大学（深圳）」**；
+     ③ 抖音 / 视频号 占位卡片改为**不可点 + 「筹备中」小圆标**（不再弹原生 alert）；④ 04 镜头直角引号改中文弯引号。
+     详见 `docs/v2-progress-report.md` 第五次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
-- **其它待办**：接入真实社交媒体链接。
+- **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 
 ## 7. 待办 / 下一步
 1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
@@ -171,7 +181,8 @@ artifacts/
    - **[已完成] 首屏→第二页 接缝修复**：真实时间逐行扫描发现首屏底边行间跳变 **9.49**（= 山峦剪影 `#050D19` 与
      第二页顶色 `#06182D~#062039` 直接相接；**旧版遗留，与视频无关**），已在 `.about-screen__bg::before` 压同色
      140px 渐隐窄带 → 修复后 **0.89**（桌面/移动均 PASS）。证据 `artifacts/screenshots/v2-seam-{before,after}-desktop.png`。
-2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
+2. **社交媒体链接**：B站 已是真实链接；抖音 / 视频号 主页链接待补 → 已按用户要求做成**不可点卡片 + 「筹备中」标注**
+   （`div.social-card.social-card--soon`，不再弹 alert）。拿到链接后：把 `div` 换回 `<a href="…">`、去掉 `social-card--soon`、把「筹备中」换回 `→`。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
    - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
