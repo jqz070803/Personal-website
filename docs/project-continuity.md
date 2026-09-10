@@ -86,9 +86,12 @@ artifacts/
     ├── v2-parallax-mobile.png   # 移动端 390 视口：山峦 + 太阳，无溢出
     ├── v2-journey-desktop.png   # 桌面端足迹拼图（10 张圆角卡片拼成完整矩形）
     ├── v2-journey-inflight.png  # 足迹拼图动画冻结在 22%：卡片仍在四周散开
-    └── v2-journey-mobile.png    # 移动端 390 视口足迹拼图（6 列骨架，同样成矩形）
-    ├── v2-hero-video-desktop.png# 桌面端首屏实拍视频背景（1440×900，?shot=1）
-    └── v2-hero-video-mobile.png # 移动端首屏实拍视频背景（390×844，?shot=1）
+    ├── v2-journey-mobile.png    # 移动端 390 视口足迹拼图（6 列骨架，同样成矩形）
+    ├── v2-hero-video-desktop.png# 桌面端首屏实拍视频背景（1440×900，?shot=1 暂停态）
+    ├── v2-hero-video-mobile.png # 移动端首屏实拍视频背景（390×844，?shot=1 暂停态）
+    ├── v2-hero-live-desktop.png # 桌面端首屏**真实播放中**（真实时间抓图，不是 ?shot=1 暂停态）
+    ├── v2-seam-before-desktop.png # 修复前：首屏→第二页接缝有横向台阶（行间跳变 9.49）
+    └── v2-seam-after-desktop.png  # 修复后：同位置台阶消失（0.89）
 ```
 - 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
 - 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
@@ -127,6 +130,10 @@ artifacts/
 - **Edge 无头截图三坑**（否则会拿到"假的成功截图"）：① 同一 `--user-data-dir` 会命中缓存 → **每次换唯一 profile**；
   ② 截图**异步写盘**，进程退出时文件可能还是旧的 → **先删目标文件再轮询等新文件**；③ `Start-Process -ArgumentList` 不给含空格路径加引号 → 直接用 `& $edge … --screenshot="$out"`。
   取证外壳 `.deepworks/tmp/shot.html` 会**先把 10 张足迹照片预热进 HTTP 缓存**再挂 iframe（`?preload=0` 关闭），避免拍到未解码的空块。
+- **查「滚动中才出现」的接缝 / 过渡问题**：`.deepworks/tmp/seam.html?gap=0.5` —— 用 `/slow` 撑住外壳页的 `load`，
+  让 Edge 在**真实时间**抓图（而非虚拟时间），并把首屏底边滚到视口正中；再逐行算平均亮度找**最大行间跳变**
+  （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
+  ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
@@ -140,9 +147,13 @@ artifacts/
   桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）+ 控制台零错误验证通过；已 git 存档（tag `v2`）。
   5. **首屏 hero 视频背景（已完成，含页面接入）**：从 216s 原始混剪精选 **10 段干净风景**（无字幕卡/无正脸），用 0.8s 交叉淡化拼成 **54.8s 循环**，
      转码为 H.264 / 854×480 / 无音轨 / faststart 的 **8.1MB** 单文件（`v2-web/assets/hero/hero-loop.mp4`）；构建脚本 `v2-web/tools/build-hero-loop.ps1` 幂等可复现。
-     **已接进页面**：`.hero__video`（最底层）+ `.hero__veil`（压暗遮罩，底部 `#08131f` 与第二页天幕同色 → 页 1→页 2 无接缝）+ JS 第四个 IIFE
-     （`play()` resolve 才淡入；被拒/失败/`?shot=1`/`prefers-reduced-motion` 一律静默回落到原渐变背景）。视频随首屏滚走，**不会跟到第二页**。
-     断言（iframe 探针）+ 像素统计（hero 区 `stdev=40.2` vs 渐变区 `6.7`）双重验证通过，详见 `docs/v2-progress-report.md` 第四次追加迭代。
+      **已接进页面**：`.hero__video`（最底层）+ `.hero__veil`（压暗遮罩，底部 `#08131f` 与第二页天幕同色）+ JS 第四个 IIFE
+      （`play()` resolve 才淡入；被拒/失败/`?shot=1`/`prefers-reduced-motion` 一律静默回落到原渐变背景）。视频随首屏滚走，**不会跟到第二页**。
+      断言（iframe 探针）+ 像素统计（hero 区 `stdev=40.2` vs 渐变区 `6.7`）双重验证通过，详见 `docs/v2-progress-report.md` 第四次追加迭代。
+      **亮度按用户反馈迭代三轮**（`.62→.80→.90→1.0`，第 ③ 轮配 `contrast(1.1)` 防发灰，用户已确认"亮度刚好"）；窄屏另有单独加强的遮罩。
+      **首屏→第二页接缝已修复**：真实时间逐行扫描发现 9.49 的行间台阶（山峦剪影 `#050D19` vs 第二页顶色 `#06182D~#062039`，
+      属旧版遗留、与视频无关），已在 `.about-screen__bg::before` 压同色 140px 渐隐窄带 → **9.49 → 0.89**（桌面/移动均 PASS）。
+      ⚠️ 注意：`.hero__veil` 在 DOM 里位于山峦**之下**，所以"遮罩底部 `#08131f`"只保证剪影**以上**区域与天幕同色，管不到首屏最底那一行。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：接入真实社交媒体链接。
 
@@ -152,6 +163,11 @@ artifacts/
    - **[已完成] 首屏 `hero` 主背景**：已升级为**实拍循环视频背景**（`v2-web/assets/hero/hero-loop.mp4`，
      由 `.hero__video` + `.hero__veil` 承载，JS 控制可见性与全部降级路径）。
      原渐变背景**保留**为兜底：自动播放被拒 / `prefers-reduced-motion` / 解码失败时自动回落，不会黑屏。
+   - **[已完成] 首屏 `hero` 亮度调校**：按用户三轮反馈迭代 `.hero__video` 的 `filter` 与 `.hero__veil` 的 α，
+     当前 `brightness(1) saturate(1) contrast(1.1)`；**CSS 侧已到顶**，再亮只能改文字侧或重编视频时烘焙 gamma。
+   - **[已完成] 首屏→第二页 接缝修复**：真实时间逐行扫描发现首屏底边行间跳变 **9.49**（= 山峦剪影 `#050D19` 与
+     第二页顶色 `#06182D~#062039` 直接相接；**旧版遗留，与视频无关**），已在 `.about-screen__bg::before` 压同色
+     140px 渐隐窄带 → 修复后 **0.89**（桌面/移动均 PASS）。证据 `artifacts/screenshots/v2-seam-{before,after}-desktop.png`。
 2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。

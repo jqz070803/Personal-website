@@ -468,6 +468,22 @@ b {
     linear-gradient(180deg, rgba(7, 19, 33, 0.94) 0%, rgba(11, 31, 56, 0.58) 55%, rgba(8, 20, 31, 0.32) 100%);
 }
 
+/* 首屏 → 第二页 接缝修补
+   首屏最底那 1px 是山峦剪影底层色 #050D19（实测全宽恒定，桌面/移动同色）；
+   而第二页顶部是 rgba(7,19,33,.94) 叠加中心蓝色辉光 → 约 #06182D~#062039，比剪影亮。
+   两者直接相接会形成一条横向台阶（实测行间跳变 9.5，相邻行噪声仅 0.9）。
+   这里在第二页顶部压一条「同色、向下 140px 渐隐」的窄带把台阶抹平。 */
+.about-screen__bg::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 140px;
+  pointer-events: none;
+  background: linear-gradient(180deg, #050d19 0%, rgba(5, 13, 25, 0) 100%);
+}
+
 .about-screen__inner {
   position: relative;
   z-index: 2;
