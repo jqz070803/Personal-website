@@ -304,3 +304,63 @@ artifacts/
 - 首屏主背景仍为渐变/风格化背景（未换成实拍），社交链接仍为占位跳转。
 - 素材再生成命令（幂等，改映射只改脚本里的 `$map`）：
   `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\resize-photos.ps1`
+
+---
+
+## v2 · 追加迭代（同日·第四次）：首屏 hero 视频背景（**素材已就绪，页面待接入**）
+
+### 🎯 需求（用户原话要点）
+把首屏 hero 背景换成**视频**：① 叠在**最下层**当背景；② 整体**亮度压暗**；③ **只属于第一页**，下滑时随第一页一起离开、不跟到第二页；
+④ 第一页 → 第二页要**丝滑过渡**；⑤ 视频需**压缩**以保证网页流畅播放（"流畅是前提"；用户接受"精选 60 秒循环"方案）。
+
+### 🔍 源素材分析
+- 源文件：`uploads/ses_f7558ff21ffeau8q6tDcaca6ZV/个人主页背景2.mp4`（**34.74MB**，uploads/ 已 gitignore，不入库）。
+- 参数：**HEVC Main 10 / yuv420p10le（10-bit）**、854×480、30fps、216.433s、视频 1.15Mbps + AAC 音轨。
+- **必须转码的两条硬理由**：① 10-bit HEVC 在多数 Chrome/Edge 上无法解码或严重卡顿；② 带音轨时浏览器**不允许自动播放**（网页背景必须静音）。
+
+### 📊 编码基准（60s 样本，H.264 `preset slow`）
+| 方案 | 体积 | SSIM |
+| :-- | --: | --: |
+| CRF20 | 20.3 MB | 0.988 |
+| CRF23 | 15.1 MB | 0.983 |
+| CRF26 | 11.1 MB | 0.976 |
+| CRF29 | 8.0 MB | 0.966 |
+| CRF26 + 轻降噪 `hqdn3d` | 11.0 MB | 0.974 |
+- **结论**：本片为手持噪点型素材，H.264 同质量码率**高于**源 HEVC —— 全长 216s 转码后 **42.6MB，比源文件还大**。
+  故"不降画质 + 小体积"不可同时满足，改用**精选片段循环**控制体积。
+- VP9（cpu-used 4）实测 SSIM 仅 0.92 且体积更大 → **弃用**；不生成 WebM/AV1 双源（单 H.264 已可全平台硬解，双源只会让仓库翻倍）。
+
+### 🎬 精选循环 EDL（10 段，均已逐秒核对：无字幕卡、无正脸）
+| # | 源起点 | 时长 | 内容 |
+| :-: | --: | --: | :-- |
+| 1 | 14.0s | 9.0s | 盐湖镜面 · 湿沙落日倒影（**开场**） |
+| 2 | 23.0s | 3.5s | 风车群金色日落 |
+| 3 | 32.0s | 4.0s | 海边古镇 + 城市天际线 |
+| 4 | 37.0s | 10.0s | 壶口瀑布 · 黄河奔流 |
+| 5 | 48.0s | 5.5s | 夜色烟花 · 打铁花 |
+| 6 | 116.0s | 6.0s | 丹霞瀑布 · 峡谷 |
+| 7 | 156.0s | 6.0s | 夜色古镇灯会 |
+| 8 | 176.0s | 6.0s | 茶园螺旋航拍 |
+| 9 | 188.0s | 5.0s | 壶口航拍 · 风车落日 |
+| 10 | 131.0s | 7.0s | 海面落日 · 镜面（**收尾 → 与开场同为暖色水面，循环接缝柔和**） |
+- 段间 `xfade=fade`、**0.8s** 交叉淡化；总时长 **54.8s**。
+
+### 📦 产出物（**已入库**）
+- `v2-web/assets/hero/hero-loop.mp4` —— **8,503,324 B ≈ 8.1MB**；`h264 / High / yuv420p`、854×480、30fps、**54.8s**、1241 kbps、**无音轨、+faststart**。
+- `v2-web/assets/hero/hero-poster.jpg` —— 15.6KB 封面帧（t=2.0s）。
+- `v2-web/tools/build-hero-loop.ps1` —— **幂等、可复现**构建脚本（EDL / 交叉时长在文件顶部常量）；
+  **不依赖字体、不写系统目录**，重跑输出字节一致，已实测复跑一次确认。
+
+### ⏭️ 页面接入（下一步，本次**未做**，留待下次继续）
+1. `v2-index.html`：在 `.hero__bg` 之后插入
+   `<video class="hero__video" autoplay muted loop playsinline preload="auto" poster="assets/hero/hero-poster.jpg">`（`<source>` 指向 `assets/hero/hero-loop.mp4`）+ 一个 `.hero__veil` 压暗遮罩层。
+2. `v2-style.css`：`.hero__video{position:absolute;inset:0;object-fit:cover;z-index:0;filter:brightness(.62) saturate(.92)}`；
+   `.hero__veil` 用 `linear-gradient(180deg, rgba(4,10,18,.46) 0%, …, #08131f 100%)` —— **底部收在与第二页 `.bg-parallax__sky` 顶色 `#08131f` 相同**，实现页 1→页 2 的丝滑衔接；
+   `.hero.is-video .hero__stars{opacity:0;animation:none}`（实拍影像启用后星空让位）；`.hero__mountains` 保留（剪影盖住视频底边、增加纵深）。
+3. `v2-script.js`：新增一个 IIFE —— 视频可播放时给 `.hero` 加 `is-video`；`?shot=1` 或 `prefers-reduced-motion` 时 `pause()` 并回退到 poster；自动播放被浏览器拦截时保持 poster 不报错。
+4. 视频随 `.hero` 一起滚走（`position:absolute` + `.hero{overflow:hidden}` 天然满足"只留在第一页"）。
+5. 完成后：`?shot=1` 截图（桌面+移动）、控制台零错误验证 → 更新文档 → commit → 用内置浏览器打开预览给用户确认。
+
+### ⚠️ 时间码踩坑（写给下一位）
+- 早先那张 `_inspect/winA.png` 的烧入时间码是**相对** `-ss` 起点的，比真实时间**少 4s**（标签 00:00:08 实际是源 00:00:12）。
+- 本文所有时间码均为**源绝对秒数**，来自 `.deepworks/tmp/vtest/mksheet.ps1` 生成的**无字** contact sheet（按 `Start + (row*Cols+col)*Step` 推算，不烧字 → 不需要字体、不需要任何系统目录权限）。

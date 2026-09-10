@@ -70,11 +70,13 @@ v2-web/
 ├── v2-script.js           # 沿用 v1 交互，末尾新增两个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
 ├── assets/
-│   └── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
+│   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
+│   └── hero/              # ★ 首屏视频背景（8.1MB）：hero-loop.mp4（54.8s / 854x480 / H.264 / 无音轨 / faststart）+ hero-poster.jpg
 └── tools/
-    └── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
+    ├── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
+    └── build-hero-loop.ps1# ★ 首屏视频循环构建器：幂等、可复现（EDL 与交叉时长在文件顶部常量），**不依赖字体/系统目录**
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含两个追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含四个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
@@ -108,6 +110,10 @@ artifacts/
 - **照片素材再生成**（幂等）：足迹照片由 `.deepworks/tmp/resize-photos.ps1` 批量缩放生成到 `v2-web/assets/journey/`；
   改映射只改脚本里的 `$map`，然后 `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\resize-photos.ps1`。
   规则：长边 1400px、`HighQualityBicubic`、JPEG 质量 82、读 EXIF `0x0112` 手动旋转。
+- **首屏视频循环再生成**（幂等）：源片放在 `uploads/`（gitignore）或传 `-Src`，然后
+  `powershell -ExecutionPolicy Bypass -File v2-web\tools\build-hero-loop.ps1`
+  → 重新产出 `v2-web/assets/hero/hero-loop.mp4` + `hero-poster.jpg`。
+  想换镜头/时长：改脚本顶部 `$edl`（`起点秒, 时长秒` 交替）与 `$fade`。**脚本不烧字、不用字体、不写系统目录**（无权限要求）。
 - **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）但**没有 `PIL`/Pillow** → 图像处理一律走 PowerShell `System.Drawing`。
   ⚠️ **PowerShell 5.1 按 ANSI 读取 `.ps1`**：脚本里写中文会乱码报错，**只用 ASCII 注释**。
   截图用系统 Edge 无头模式（`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
@@ -123,15 +129,18 @@ artifacts/
      移动端与 `prefers-reduced-motion` 降级；山峦由幂等脚本参数化生成；并把「学习日常」改写为**劳逸结合**；
   3. 足迹板块改为**「苹果发布会式拼图」**：10 张不等尺寸圆角卡片用 12×6 Grid 恰好铺满，滚动到位后按各自方向**从四周涌入**、错峰归位拼成完整矩形（手机端 6 列骨架）；
   4. 足迹接入**10 张用户实拍照片**（`v2-web/assets/journey/`，2.5MB）：渐变占位 → `<img>` + 逐张 `object-position` 裁切重心；
-     m6 文案改**「追光」**、m4 换新图（民俗巡游人海）并连锁重排（原文案图移到 m10）；动画按反馈调为**更慢更从容**（`STEP 0.10s`、归位 1.6s）。
+      m6 文案改**「追光」**、m4 换新图（民俗巡游人海）并连锁重排（原文案图移到 m10）；动画按反馈调为**更慢更从容**（`STEP 0.10s`、归位 1.6s）。
   桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）+ 控制台零错误验证通过；已 git 存档（tag `v2`）。
+  5. **首屏 hero 视频背景 · 素材已就绪（页面接入待做）**：从 216s 原始混剪中精选 **10 段干净风景**（无字幕卡/无正脸）用 0.8s 交叉淡化拼成 **54.8s 循环**，
+     转码为 H.264 / 854×480 / 无音轨 / faststart 的 **8.1MB** 单文件（`v2-web/assets/hero/hero-loop.mp4`），构建脚本 `v2-web/tools/build-hero-loop.ps1` 幂等可复现。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
-- **其它待办**：首屏主背景换成实拍照片、接入真实社交媒体链接。
+- **其它待办**：把首屏 hero 视频背景**接进页面**（HTML/CSS/JS，步骤见 `docs/v2-progress-report.md` 第四次追加迭代）、接入真实社交媒体链接。
 
 ## 7. 待办 / 下一步
 1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
    - 换图/调裁切：改 `.deepworks/tmp/resize-photos.ps1` 的 `$map` 重新生成，再调 `v2-style.css` 里对应 `.ms-tile--mN` 的 `--pos`。
-   - **仍待办**：首屏 `hero` 主背景仍是渐变/风格化背景，尚未换成实拍照片。
+   - **仍待办**：首屏 `hero` 主背景仍是渐变/风格化背景。—— 现已升级为**视频背景**方案：
+     素材已就绪（`v2-web/assets/hero/`，见 §5），**页面接入待做**（HTML/CSS/JS 步骤见 `docs/v2-progress-report.md` 第四次追加迭代）。
 2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
@@ -144,8 +153,11 @@ artifacts/
 - **本地预览**：用 Python 启动 `http.server` 于端口 **8123**（项目根目录，长期沿用）。
 - **截图工具**：使用系统自带 Microsoft Edge 无头模式（headless）截图，已验证可用。
 - **node**：本机**不可用**（`node --check` 报 CommandNotFoundException），所以不要依赖 npm/构建链。
-- **未纳入版本控制的本地文件**（用户尚未决定是否提交）：`个人主页背景1.mp4`、`网页截图/`、
-  `opencode.jsonc`、`.opencode/`、`outputs/`。临时件统一放 `.deepworks/tmp/`（已被 `.gitignore` 忽略）。
+- **未纳入版本控制的本地文件**（用户尚未决定是否提交）：`个人主页背景1.mp4`、`个人主页背景1-压缩版.mp4`、
+  `个人主页背景2.mp4`（首屏视频的原始素材，`uploads/` 下有同源副本）、`照片展示/`（12 张原图约 78MB）、
+  `网页截图/`、`opencode.jsonc`、`.opencode/`、`outputs/`。临时件统一放 `.deepworks/tmp/`（已被 `.gitignore` 忽略）。
+- **首屏视频素材已入库**（`v2-web/assets/hero/`，8.1MB）；但**34.7MB 原始源片不入库**（在 gitignore 的 `uploads/` 下）。
+  需重建循环时，把源片放进 `uploads/`（脚本自动选取最大的 `.mp4`）或给 `build-hero-loop.ps1` 传 `-Src`。
 
 ## 8.5 归档 / commit 规范（★ 用户明确要求，长期遵守）
 - **每次 git 存档（commit）的提交标题，必须用一句简洁语言直接标出本次优化的点**。
