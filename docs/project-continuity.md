@@ -67,7 +67,7 @@ artifacts/
 v2-web/
 ├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）；01 关于左栏改为 .about-photo__frame 内的 4 张 .about-photo__img 照片墙（舞龙 / 华为门店自拍 / 地铁自拍 / 证件照，滚动时依次交叉渐显）
 ├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；.about-photo__frame/__img 绝对堆叠照片墙；.nav::after 毛玻璃底（底边 22px mask 渐隐，消除切断太阳辉光的硬边）；.ms-tile__cap 暗角收紧；#social 桌面底留白 72px；html.shot
-├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
+├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（**进入视野才开演**：元素顶边越过视口 80% 触发，四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
 ├── assets/
 │   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
@@ -77,7 +77,7 @@ v2-web/
     ├── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
     └── build-hero-loop.ps1# ★ 首屏视频循环构建器：幂等、可复现（EDL 与交叉时长在文件顶部常量），**不依赖字体/系统目录**
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含七个追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含八个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
@@ -87,6 +87,8 @@ artifacts/
     ├── v2-parallax-mobile.png   # 移动端 390 视口：山峦 + 太阳，无溢出
     ├── v2-journey-desktop.png   # 桌面端足迹拼图（10 张圆角卡片拼成完整矩形）
     ├── v2-journey-inflight.png  # 足迹拼图动画冻结在 22%：卡片仍在四周散开
+    ├── v2-journey-flyin-late.png # ★ 真实时间抓图：动画飞入中（上排已归位，追光/古镇/日落仍模糊 + 位移）
+    ├── v2-journey-flyin-done.png # 同一位置的归位后对照帧（is-done 定格）
     ├── v2-journey-mobile.png    # 移动端 390 视口足迹拼图（6 列骨架，同样成矩形）
     ├── v2-hero-video-desktop.png# 桌面端首屏实拍视频背景（1440×900，?shot=1 暂停态）
     ├── v2-hero-video-mobile.png # 移动端首屏实拍视频背景（390×844，?shot=1 暂停态）
@@ -118,7 +120,7 @@ artifacts/
 - **C1 足迹字幕**：`.ms-tile__cap` 暗角 `0% → 0.5 @44% → 0.9 @100%` + 轻 `text-shadow`（亮部照片压到标题行也读得清）。
 - **C2 导航底边**：毛玻璃底改挂 `.nav::after` + 底边 22px `mask-image` 渐隐，不再把视差太阳辉光横向切断（原 `border-bottom` 发丝线已移除）。
 - **C3 06 社交面板**：桌面 `#social.section{padding-bottom:72px}`，消掉面板下半截的 56px 空档（面板高 555 → 499）。
-- 迭代过程见 `docs/v2-progress-report.md` 的**七个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3）。
+- 迭代过程见 `docs/v2-progress-report.md` 的**八个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3；足迹拼图触发时机修复）。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
@@ -151,8 +153,8 @@ artifacts/
   （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
   ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 - **⚠️「改了却看不见」→ 先怀疑样式表缓存**：浏览器对 `v2-style.css` 走 HTTP 缓存，而加在**页面 URL 上的 `?v=xxx` 只能刷新 HTML，刷不到 CSS**。
-  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=8`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
-  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=8"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=9`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
+  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=9"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
   💡 想确认探针拿到的是**新 JS**，不必非升 `?v`：让新旧算法在小数位上不同（如照片墙 opacity 保留 3 位），看数字指纹即可（`http.server` 带 `Last-Modified`，文件 mtime 变了自然会取新的）。
 - **⚠️「写了却看不见」不都是缓存问题 → 还要查选择器是否真的匹配**：01 关于右栏空白就是 `reveal` 写成了**裸属性**
   （`<div class="about-info" data-stagger reveal>`），`.reveal` 压根匹配不到 → IntersectionObserver 不观察 → `[data-stagger].is-visible > *` 的揭示规则永不生效 → 子项永久 `opacity:0`。
@@ -165,6 +167,19 @@ artifacts/
 - **滚动驱动的"渐显 / 擦除"类动效**：驱动元素要选**非 sticky** 的那个（sticky 元素停驻期 `rect` 不变 → 进度会冻住）；
   用「区块在视口里走过的行程」当进度条，且**纯滚动位置函数**（不累积状态）→ 往回滚能原路返回。
   写 `opacity` 时**始终写数值**：`o === 1 ? "" : o` 这种省略会让它回落到 CSS 的 `:first-child{opacity:1}` 规则 → 出现"该亮的不亮"。
+- **"滚动触发的入场动画"绝不要用"加载后 N 秒"兜底**：页面一打开就播 → 用户滚到该板块时早播完了
+  （本次 03 足迹拼图"看不到动画"的真因就是 `setTimeout(start, 2500)`）。也别用 `IntersectionObserver` 的**面积比例**
+  `threshold: 0.16` 之类：元素比视口高得多时（窄屏更明显）永远达不到比例 → 回调不触发，最终退化成"加载即播"。
+  **可靠判据**：`el.getBoundingClientRect().top < innerHeight * 0.8`（**判顶边、与元素自身高度无关**，窄屏一样成立）
+  + `scroll` / `resize` / `load` 各查一次 + `started` 守卫 + **开演即 `removeEventListener`**（不重播）；
+  `window.setTimeout(check, 400)` 只用来兜底"直接落在该板块附近打开 / 锚点跳转"这种情况。
+- **探针快照的 `n` 字段只保留前两个 class**（`split(/\s+/).slice(0, 2).join(".")`）→ `is-in` / `is-done` **会被截掉**，
+  据此判断"动画有没有触发"会**误判成没触发**。快照对象已加完整类名字段 **`cls`**（`String(el.className || "").trim()`），
+  **判断状态一律看 `cls`**。
+- **抓"过渡进行中"的帧**：`--virtual-time-budget` 会把 CSS 过渡与 `setTimeout` **一起快进到终点** → 必须去掉它，
+  改用 `/slow`（`probe_server.py`）撑住外壳页的 `load` + `seam.html` 的 **`&y_at=<毫秒>`**（把滚动推迟到指定时刻）在**真实时间**里抓图；
+  `.deepworks/tmp/shot.ps1` 已加 **`-RealTime`** 开关（自动去掉 `--virtual-time-budget`）。
+  ⚠️ 无渲染帧时过渡不推进 → **别用截帧里的 `opacity` 判断动画是否在跑**，看"类名 + `transform` 数值"更可靠。
 - **导航毛玻璃底 + 底边渐隐**：毛玻璃底要挂在**伪元素**上（`.nav::after`）才能用 `mask-image` 让底边平滑收尾；
   挂在本体上时 `border-bottom` 会把背后的太阳辉光**横向切断**成一条硬边（实测 2px 内跳 +22~+33 → 修后 +2.9/+0.7）；`mask` 对 `backdrop-filter` 同样生效。
 - **`.section` 的 `padding: clamp(72px,10vw,128px)` 是"面板发空"的常见来源**：内容只有一行时，下半截全是这段统一留白
@@ -209,7 +224,12 @@ artifacts/
      驱动源是整块 `.about-main` 的滚动行程（桌面/移动实测 opacity 与公式逐点吻合，重叠期不透底）；
      ② **C1** 足迹字幕暗角收紧（亮部照片上白字也读得清）；③ **C2** 导航毛玻璃底改挂 `.nav::after` + 底边 22px `mask` 渐隐，
      消掉切断太阳辉光的横向硬边（2px 内 +22~+33 → +2.9/+0.7）；④ **C3** 06 社交面板桌面底留白 128 → 72px（面板高 555 → 499，`docH` 9221 → 9165）。
-     详见第七次追加迭代。
+      详见第七次追加迭代。
+   9. **03 足迹拼图"看不到动画"修复**：真因是**加载后 2.5s 的兜底定时器**（页面一打开就播完，用户滚到时只剩静态结果）
+      + `IntersectionObserver` 的面积比例 `threshold: 0.16` 在高瘦拼图上永远达不到 → 进一步退化成"加载即播"。
+      改为**元素顶边越过视口 80% 才开演**（`rect.top < vh * 0.8`）+ `scroll`/`resize`/`load` 触发 + `started` 守卫 + 开演摘监听。
+      实测：y=0 停留 7s 仍 `is-armed`（**无** `is-in`）→ y=4200（top=672 < 720）才 `is-in` → y=4700 已 `is-done`。
+      实拍 `artifacts/screenshots/v2-journey-flyin-late.png`（飞入中）/ `v2-journey-flyin-done.png`（归位后）。详见第八次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 

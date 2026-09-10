@@ -681,3 +681,89 @@ var text = (el.textContent || "").replace(/\s+/g, " ").trim();
 5. **`getBoundingClientRect()` 含 `.reveal` 的 `translateY(28px)`**：未揭示时读到的 `top` 比真实值大 28px（移动端 1955 vs 1927 就是这么来的）。
 
 本轮含 CSS/JS 改动 → 版本号 `?v=7` → **`?v=8`**（三处：`v2-style.css` / `v2-about-data.js` / `v2-script.js`）。
+
+---
+
+## v2 · 追加迭代（第八次：03 足迹拼图改为"进入视野才开演"，去掉加载即播的兜底）
+
+### 🎯 现象（用户反馈原话）
+> "足迹拼图的动画看不到，是不是图片加载太早了？"
+
+### 🔍 根因（两条，都在 `v2-script.js` 的足迹 IIFE 里）
+
+1. **加载即播的兜底定时器**：`if (armed) { window.setTimeout(start, 2500) }` —— 页面打开 **2.5 秒后无论用户在哪都会开演**。
+   而桌面 `[data-mosaic]` 在文档 y=**4872**，用户从首屏滚到 03「山川湖海足迹」要好几秒 —— 滚到时动画**早就播完了**，
+   只剩拼好的静态结果。这正是"看不到动画"的**直接原因**。
+2. **`IntersectionObserver` 用面积比例 `threshold: 0.16` 不可靠**：拼图比视口高得多时（窄屏 6 列骨架更明显），
+   可见面积永远到不了 16% → 回调永不触发 → 实际只剩上面那条定时器在起作用（动画退化成"加载即播"）。
+
+### ⚙️ 修复（只动**触发**，不动动画本身的算法与时长）
+
+```
+旧（要点）：
+  new IntersectionObserver(cb, { threshold: 0.16 }).observe(mosaic);
+  if (armed) { window.setTimeout(start, 2500); }      // ← 元凶
+
+新：
+  var TRIGGER = 0.8;                                   // 视口高度的 80%
+  var started = false;
+  function visible() {
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    return mosaic.getBoundingClientRect().top < vh * TRIGGER;
+  }
+  function check() { if (!started && visible()) start(); }
+  function start() {
+    if (started) return;
+    started = true;
+    window.removeEventListener("scroll", check);       // 开演即摘监听，绝不重播
+    window.removeEventListener("resize", check);
+    layout();                                          // 开演前再校正一次位移向量
+    play();
+  }
+  window.addEventListener("scroll", check, { passive: true });
+  window.addEventListener("resize", check);
+  if (document.readyState === "complete") check();
+  else window.addEventListener("load", check);
+  window.setTimeout(check, 400);                       // 兜底：直接落在 03 附近打开 / 锚点跳转
+```
+
+- 判据是**元素顶边 vs 视口高度**，**与元素自身多高无关** → 窄屏 6 列骨架同样成立（不再有面积比例死角）；
+- **去掉一切"加载后 N 秒"**：只有真的进入视野才开演；
+- `started` 守卫 + 开演摘监听 → 不会重复播放；
+- `?shot=1` / `prefers-reduced-motion` 的**定格分支未动**（仍直接 `is-in is-done`，静态截图行为不变）。
+
+### ✅ 验证（探针实测，桌面 1440×900，`seam.html?probe=1`）
+
+| 快照 | scrollY | `[data-mosaic]` top | `cls`（完整类名） | 首张 `.ms-tile` 的 transform |
+| :-- | --: | --: | :-- | :-- |
+| 第 1 次（t≈3s） | 0 | 4872 | `journey-mosaic is-armed` | `opacity 0`、`scale .861`、位移 `(-280, -158)` |
+| 第 2 次（t≈5s） | 0 | 4872 | `journey-mosaic is-armed` | 同上 —— **已超过旧的 2.5s，仍未播 → 兜底确实被去掉了** |
+| 第 3 次（t≈7s） | 0 | 4872 | `journey-mosaic is-armed` | 同上 |
+| 第 4 次 | 3600 | 1272 | `journey-mosaic is-armed` | 同上（1272 > 触发线 720 → **正确地不开演**） |
+| 第 5 次 | 4200 | 672 | `journey-mosaic is-armed is-in` | `opacity 1`，位移已收拢到 `-0.05px`（**正在归位**） |
+| 第 6 次 | 4700 | 172 | `journey-mosaic is-armed is-in is-done` | `transform: none`（**已定格**） |
+
+触发线 = `0.8 × 900 = 720`：top 从 **1272（不触发）** 到 **672（触发）**，实测与公式一致。
+
+### 📸 真实时间实拍（抓"过渡进行中"的帧）
+
+虚拟时钟会把过渡**快进到终点**（连 `setTimeout` 也一起快进），所以中段帧必须走真实时间。
+本轮给取证外壳 `.deepworks/tmp/seam.html` 加了 **`&y_at=<毫秒>`**：把滚动推迟到指定时刻，
+并用 `/slow` 拖住外壳页的 `load` → headless 在真实时间里活到 20s 才截图：
+
+- `artifacts/screenshots/v2-journey-flyin-late.png` —— **飞入中**：上排（山 / 湖 / 海 / 城与人）已归位且清晰，
+  「追光 / 古镇 / 日落」仍处于**模糊 + 位移**中（`filter: blur(14px)` 尚未收尾）；
+- `artifacts/screenshots/v2-journey-flyin-done.png` —— 同一位置**归位后**的对照帧。
+
+### 🧰 本轮工具坑（已写进 `project-continuity.md` §6）
+
+1. **探针的快照 `n` 字段只保留前两个 class**（`String(className).trim().split(/\s+/).slice(0, 2).join(".")`）→
+   `is-in` / `is-done` **被截掉**，一度据此**误判"触发没生效"**。已给快照对象加 `cls: String(el.className || "").trim()`（完整类名），
+   判断状态**一律看 `cls`**。
+2. **`--virtual-time-budget` 会快进过渡与定时器** → 抓"动画中段"必须**去掉该参数**
+   （`shot.ps1` 新增 `-RealTime` 开关）+ `/slow` 撑住 `load` + `&y_at` 控制滚动时刻；
+   同一次会话里 y_at=18900 与 19200 抓到的相位明显不同（文件 954,629B vs 692,492B），证明真实时间链路生效。
+3. **无渲染帧时过渡不推进** → 不要用截帧里的 `opacity` 判断动画是否在跑；
+   用"**类名是否加上 + `transform` 数值**"更可靠（本次两张实拍 + 探针数值互相印证）。
+
+本轮含 JS 改动 → 版本号 `?v=8` → **`?v=9`**（三处：`v2-style.css` / `v2-about-data.js` / `v2-script.js`）。

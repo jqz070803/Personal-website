@@ -436,7 +436,6 @@
 
   var STEP = 0.10; /* 每张卡片之间的错峰间隔（秒）：更明显的依次登场 */
   var maxDelay = 0;
-  var armed = false;
 
   /* 用 offsetLeft/offsetTop 而不是 getBoundingClientRect：
      后者会被已经施加的 transform 影响，导致起点被重复叠加。 */
@@ -498,8 +497,42 @@
 
   /* 先算好起点，再上锁（is-armed）——顺序不能反，否则量到的是位移后的位置 */
   layout();
-  armed = true;
   mosaic.classList.add("is-armed");
+
+  var started = false;
+  var TRIGGER = 0.8; /* 拼图顶边升到视口 80% 高度处（刚进入视野下沿）才开演 */
+
+  function visible() {
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    return mosaic.getBoundingClientRect().top < vh * TRIGGER;
+  }
+
+  function start() {
+    if (started) return;
+    started = true;
+    /* 一旦开演就摘掉监听，之后滚动零开销 */
+    window.removeEventListener("scroll", check);
+    window.removeEventListener("resize", check);
+    layout(); /* 用滚动到位时的最终尺寸再校正一次 */
+    play();
+  }
+
+  /* 触发条件 = 「拼图真的进入视野了」，不能用这两种：
+     - 可见面积比例 threshold：拼图比视口高得多时（窄屏/手机）永远达不到比例，
+       只能靠兜底，退化成"加载即播放"；
+     - 加载后 N 秒兜底定时器：页面还停在首屏时动画就播完了，
+       用户滚到这一页只剩一个拼好的静态结果，完全看不到"从四周涌入"。 */
+  function check() {
+    if (visible()) start();
+  }
+
+  window.addEventListener("scroll", check, { passive: true });
+  window.addEventListener("resize", check);
+
+  /* 首帧先量一次：刷新、带 hash 直接落到页面中段时也要能触发 */
+  if (document.readyState === "complete") check();
+  else window.addEventListener("load", check);
+  window.setTimeout(check, 400);
 
   /* 窗口尺寸变化时重算起点（已归位后就不必再算） */
   var rt;
@@ -508,36 +541,6 @@
     window.clearTimeout(rt);
     rt = window.setTimeout(layout, 180);
   });
-
-  function start() {
-    layout(); /* 用滚动到位时的最终尺寸再校正一次 */
-    play();
-  }
-
-  if ("IntersectionObserver" in window) {
-    var io = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            io.unobserve(entry.target);
-            start();
-          }
-        });
-      },
-      { threshold: 0.16 }
-    );
-    io.observe(mosaic);
-  } else {
-    start();
-  }
-
-  /* 保险：万一 IntersectionObserver 没有触发（老浏览器/异常），
-     2.5 秒后自动播放，避免内容一直停在不可见状态 */
-  if (armed) {
-    window.setTimeout(function () {
-      if (!mosaic.classList.contains("is-in")) start();
-    }, 2500);
-  }
 })();
 
 /* =========================================================
