@@ -221,8 +221,10 @@ b {
   opacity: 0;
   pointer-events: none;
   transition: opacity 1.2s ease;
-  /* 压暗 + 轻微降饱和：影像是背景，不是主体 */
-  filter: brightness(0.62) saturate(0.92) contrast(1.02);
+  /* 压暗 + 轻微降饱和：影像是背景，不是主体。
+     亮度经实测调校：0.62 → 0.80（hero 区平均亮度 31/255 → 约 53/255），
+     风景细节可辨、白色文案对比度仍然充足。 */
+  filter: brightness(0.80) saturate(0.96) contrast(1.04);
 }
 .hero.is-video .hero__video {
   opacity: 1;
@@ -239,12 +241,12 @@ b {
   opacity: 0;
   transition: opacity 1.2s ease;
   background:
-    radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.30), rgba(3, 9, 16, 0.66) 78%),
+    radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.18), rgba(3, 9, 16, 0.54) 78%),
     linear-gradient(
       180deg,
-      rgba(4, 10, 18, 0.62) 0%,
-      rgba(5, 13, 23, 0.42) 34%,
-      rgba(6, 16, 28, 0.52) 70%,
+      rgba(4, 10, 18, 0.44) 0%,
+      rgba(5, 13, 23, 0.24) 34%,
+      rgba(6, 16, 28, 0.34) 70%,
       #08131f 100%
     );
 }

@@ -362,10 +362,10 @@ artifacts/
    ```
 2. **`v2-style.css`** 新增三条规则（插在 hero 段落，`.hero__stars` 定义之前）：
    - `.hero__video` —— `position:absolute; inset:0; object-fit:cover; z-index:0; opacity:0; pointer-events:none;
-     transition:opacity 1.2s ease; filter:brightness(.62) saturate(.92) contrast(1.02)`；
+     transition:opacity 1.2s ease; filter:brightness(.80) saturate(.96) contrast(1.04)`；
      **默认透明**是安全设计 —— 只有 JS 成功接管播放时才由 `.hero.is-video .hero__video{opacity:1}` 淡入。
-   - `.hero__veil` —— 压暗遮罩：中部放射渐变（中心 α.30 / 边缘 α.66）+ 纵向渐变
-     `rgba(4,10,18,.62) → rgba(5,13,23,.42) → rgba(6,16,28,.52) → #08131f`；
+   - `.hero__veil` —— 压暗遮罩：中部放射渐变（中心 α.18 / 边缘 α.54）+ 纵向渐变
+     `rgba(4,10,18,.44) → rgba(5,13,23,.24) → rgba(6,16,28,.34) → #08131f`；
      **底部收在 `#08131f`，与第二页 `.bg-parallax__sky` 顶色完全一致**（实测第二页 `.about-screen__bg` 顶色
      ≈ `#071320`，与 `#08131f` 仅差 1/255，肉眼无接缝）。
    - `.hero.is-video .hero__stars{opacity:0; animation:none; transition:opacity 1.2s ease}` —— 实拍启用后星空让位，避免"星星叠在白天风景上"。
@@ -411,6 +411,32 @@ artifacts/
 
 ### 📸 本轮截图
 - `artifacts/screenshots/v2-hero-video-desktop.png`（1440×900）、`artifacts/screenshots/v2-hero-video-mobile.png`（390×844）。
+
+### 🔆 亮度调校（用户反馈后 · 仅改 CSS，未重新编码视频）
+用户在内置浏览器预览后反馈"调亮一些，让风景更明显"。**只动两个 CSS 值**，视频文件零改动：
+
+| 项目 | 调前 | 调后 |
+| :-- | :-- | :-- |
+| `.hero__video` filter | `brightness(.62) saturate(.92) contrast(1.02)` | `brightness(.80) saturate(.96) contrast(1.04)` |
+| `.hero__veil` 放射渐变 | 中心 α.30 / 边缘 α.66 | 中心 **α.18** / 边缘 **α.54** |
+| `.hero__veil` 纵向渐变 | .62 / .42 / .52 → #08131f | **.44 / .24 / .34** → #08131f |
+
+**遮罩底部仍然 100% `#08131f` 不变** —— 这是"页 1 → 页 2 无接缝"的唯一依据，调亮时**绝不能动它**。
+
+像素统计复核（`System.Drawing` 采样，同一采样网格）：
+| 区域 | 调前 | 调后 |
+| :-- | --: | --: |
+| 桌面 hero 平均亮度 | 31.2/255 | **48.7/255（+56%）** |
+| 移动 hero 平均亮度 | 45.9/255 | **62.0/255（+35%）** |
+| 桌面 hero 纹理强度 stdev | 40.2 | 37.8 |
+| 桌面纯渐变区 stdev（对照） | 6.7 | 7.2 |
+| 桌面截图体积 | 498,468 B | 599,191 B |
+
+> stdev 略降不是"变糊"：调暗时大量像素被压到 0 造成**截断堆积**，反而把方差顶高了；
+> 提亮后直方图铺开，方差回落。hero 区 37.8 仍**远高于**渐变区的 7.2 → 证明渲染的确实是实拍画面。
+
+**调亮时的安全边界**：`brightness` 越高、遮罩 α 越低，白色文案的对比度就越危险。
+经验阈值：hero 区平均亮度**不要超过 ~75/255**，否则 `.hero__lead` 这类小号浅色文字会开始"发灰"。
 
 ### ⚠️ 时间码踩坑（写给下一位）
 - 早先那张 `_inspect/winA.png` 的烧入时间码是**相对** `-ss` 起点的，比真实时间**少 4s**（标签 00:00:08 实际是源 00:00:12）。

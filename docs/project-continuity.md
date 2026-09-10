@@ -197,5 +197,8 @@ artifacts/
   脚本幂等（先删后插），连续运行输出字节一致。
 - **改首屏视频**：换镜头/时长改 `v2-web/tools/build-hero-loop.ps1` 顶部 `$edl`/`$fade` 后重跑；
   只调"压暗程度/遮罩"改 `v2-style.css` 里 `.hero__video` 的 `filter: brightness(...)` 与 `.hero__veil` 的渐变 alpha 即可，**无需重新编码视频**。
+  当前调校值：`brightness(.80) saturate(.96) contrast(1.04)`，遮罩 α 中心 .18 / 边缘 .54、纵向 .44/.24/.34。
+  ⚠️ **`.hero__veil` 纵向渐变的 `100%` 必须是纯 `#08131f`**（与 `.bg-parallax__sky` 顶色相同）——这是页 1→页 2 无接缝的唯一依据，调亮时不要动它。
+  ⚠️ hero 区平均亮度建议**不超过 ~75/255**，否则浅色小号文字对比度会不足。
 - **验证改动的正确姿势**（血泪教训）：`--virtual-time-budget` 会让 CSS 过渡卡在起始值 → **误判成 bug**；
   `--dump-dom` 在 detached 启动下拿不到 stdout → 必须用 `probe_server.py` + `verify-hero.html` 走 HTTP 回报。
