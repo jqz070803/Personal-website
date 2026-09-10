@@ -226,3 +226,81 @@ artifacts/
 
 ### 🚧 遗留
 - 仍为**渐变占位图**（`.ph`），结构已预留 `TODO(v2)`：把 `.ms-tile__media` 换成 `<img src="...">` 即可无缝替换为真实照片（样式已写好 `object-fit: cover`）。
+  → 已在**第三次追加迭代**中完成（见下节）。
+
+---
+
+## v2 · 追加迭代（同日·第三次）：足迹接入真实照片 + 动画节奏打磨
+
+### 🎯 需求来源
+> 用户把 11 张实拍照片放进项目根目录 `照片展示/`，说*「足迹这里的图片可以用我提供的」*；
+> 并对上一轮动画反馈：*「感觉图片移动的速度可以再慢一点，然后更多一点错落感」*。
+
+拆成两件事：① 把 10 张渐变占位换成**真实照片**；② 动画**更慢更从容 + 错峰更明显**。
+
+### 🖼️ 素材流水线（无 PIL，纯 PowerShell）
+- 本机 **没有 `PIL`/Pillow**、`node` 也不可用 → 缩图改用 **`System.Drawing`（.NET）**：`.deepworks/tmp/resize-photos.ps1`。
+- 处理规则：长边压到 **1400px**、等比缩放、`HighQualityBicubic`、JPEG **质量 82**、白底填充、**读 EXIF `PropertyId 0x0112` 手动旋转**
+  （浏览器会自动按 EXIF 转、`System.Drawing` 不会 → 不处理会歪；本次 10 张 orient 全为 1）。
+- ⚠️ **PowerShell 5.1 按 ANSI 读脚本**：`.ps1` 里写中文（无 BOM）会乱码并报 `InvalidLeftHandSide` → **脚本内只用 ASCII 注释**。
+- 输出到 `v2-web/assets/journey/`，10 张共 **2.5MB**（单张 95KB～635KB），全部 HTTP `HEAD` 校验 **200**。
+
+### 📷 照片 → 卡片映射
+| 文件 | 来源 | 内容 | 卡片 | 文案 |
+| :--- | :---: | --- | :---: | --- |
+| `01-shan.jpg` | p04 | 雪山与徒步者 | m1 | 山 · 云端之上，徒步者的信仰 |
+| `02-hu.jpg` | p02 | 湖面倒影 | m2 | 湖 · 静水如镜，倒映天空 |
+| `03-hai.jpg` | p10 | 海边日落 | m3 | 海 · 潮起潮落，看尽人间 |
+| `04-cheng-yuren.jpg` | ★ p12（用户后补） | 夜色里民俗巡游的人海 | m4 | 城与人 · 每一次停留，都是故事 |
+| `05-xingkong.jpg` | p08 | 打铁花夜景 | m5 | 星空 · 银河落在头顶 |
+| `06-zhuiguang.jpg` | p07 | 大漠光伏阵列 | m6 | **追光 · 把阳光收进每一格** |
+| `07-guzhen.jpg` | p03 | 亭台飞檐 + 银杏 | m7 | 古镇 · 人间烟火 |
+| `08-caoyuan.jpg` | p01 | 绿色草坡 | m8 | 草原 · 风把草吹成海 |
+| `09-richu.jpg` | p09 | 云海粉紫日出 | m9 | 日出 · 等一场日出 |
+| `10-lushang.jpg` | p05 | 山谷栈道的两位同行者 | m10 | 在路上 · 下一站，未定 |
+
+- **去重发现**：源目录 p04 与 p06 **字节完全相同**（MD5 `3EA572317B11…`，2,505,508 B）→ 原 11 张里只有 10 张唯一。
+- **打铁花重复的处理**：原本 m5、m11 都是打铁花 → 用户选择「其中一张换成别的照片」并补进第 12 张（民俗巡游人海）→
+  用**连锁重排**消化：新图进 m4「城与人」、原 m4 的两位同行者移到 m10「在路上」、原 p11（打铁花河面倒影）**弃用** → 打铁花在 m5 只出现一次。
+- **文案微调**：m6 原「雪与云 · 风雪兼程，向高处走」与照片（光伏阵列）不符 → 用户选择保留此图并改文案为 **「追光 · 把阳光收进每一格」**；
+  `06-xue-yun.jpg` 相应改名 `06-zhuiguang.jpg`。
+
+### 🧱 HTML / CSS 改造（占位 → 真实照片）
+- `v2-index.html`：10 个 `<div class="ms-tile__media ph">` → `<img class="ms-tile__media" src="assets/journey/xx.jpg" alt="…" loading="lazy" decoding="async">`；
+  `alt` 写实际内容（如 m4「夜色里民俗巡游的人海」、m10「走山谷栈道的两位同行者」）。
+- `v2-style.css`：
+  - `.ms-tile__media` **本身就是 `<img>`**（`position:absolute; inset:0; width/height:100%; object-fit:cover; object-position: var(--pos, center)`）；删掉 `TODO(v2)` 与给内层 `img` 的规则。
+  - 柔光 `::after` 从 `.ms-tile__media` **上移到 `.ms-tile`**（图片换 `<img>` 后 `::after` 会盖不到内容）；`.ms-tile__cap` 加 `z-index: 2`。
+  - 原 10 条 `.ms-tile--mN .ph` 渐变**改挂到 `.ms-tile--mN`** → 既作图片加载失败的兜底底色，又可承载每张的裁切重心 `--pos`。
+  - 每张给独立 `--pos`（裁切重心，避免主体被切）：m4/m5 `50% 45%`、m6 `50% 42%`、m7 **`50% 68%`**、m8/m9 `50% 45%`、m10 **`50% 48%`**，m1～m3 居中。
+    （m7 由 30% 调到 68% 后，古镇的**琉璃瓦飞檐**正好露出。）
+- `.journey-note` 文案改为：*「※ 以上均为我在旅途中的实拍，会随足迹持续更新。」*
+
+### 🎞️ 动画节奏调整（按用户反馈）
+| 参数 | 旧 | 新 | 效果 |
+| --- | :---: | :---: | --- |
+| 错峰步长 `STEP` | 0.055s | **0.10s** | 涟漪错落更明显 |
+| 归位时长 `transform` | 1.15s | **1.6s** | 更慢更从容（`opacity` 0.9s、`filter` 0.95s） |
+| `is-done` 收尾定时 | `maxDelay*1000+1420` | **`+1870`** | 匹配更长时长，避免提前解除 `will-change` |
+
+> 飞入距离 / 虚化 / 缩放幅度按用户选择**保持不变**，只动"快慢与错峰"。
+
+### ✅ 验证结果
+- **几何自检三视口全通过**（`.deepworks/tmp/check-mosaic.html`）：1366（12×6，盒 1030×562）/ 900（12×6）/ 390（6×12，盒 340×662），
+  均 `flush` 齐边、`uncovered=0`、`overlapped=0`、命中 10/10、分带 0 错 → `PERFECT-RECTANGLE-NO-HOLES`。
+- **控制台零错误**：Edge `--enable-logging=stderr` 跑正常页与 `?shot=1`，无 `Uncaught` / `SyntaxError` / `TypeError` / `net::ERR` / `404`。
+- **图片加载诊断**：`.deepworks/tmp/probe-imgs.html` 逐张断言 `complete=true`、`naturalWidth>0`、`object-position` 生效 → 10/10 正常。
+- **截图重出**：`v2-journey-desktop.png`（10 张实拍拼合完成）、`v2-journey-inflight.png`（动画中段，四周散开带虚化）、
+  `v2-journey-mobile.png`（390 视口 6 列骨架）；桌面端已肉眼核对语义归位、无重复主题、古镇露出飞檐。
+
+### ⚠️ 截图踩坑（写给下一位，务必照做）
+- Edge 无头模式**同一 `--user-data-dir` 会命中缓存**，导致新截图与旧图**字节数完全一致**（假成功）。
+- Edge **异步写盘**：进程早已退出、文件可能还是旧的 → 必须**每次换唯一 profile**、**先删目标文件**、`--virtual-time-budget` 给足、再**轮询等文件出现**。
+- `Start-Process -ArgumentList` **不会**给含空格的路径加引号 → 用直接调用 `& $edge ... --screenshot="$out"`。
+- `.deepworks/tmp/shot.html` 外壳已升级：**先用 `new Image()` 把 10 张足迹照片预热进 HTTP 缓存**，再挂载 iframe（`?preload=0` 可关），
+  避免"图还没解码就截图"拍出空块。
+
+### 🚧 遗留
+- 首屏主背景仍为渐变/风格化背景（未换成实拍），社交链接仍为占位跳转。
+- 素材再生成命令（幂等，改映射只改脚本里的 `$map`）：
+  `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\resize-photos.ps1`

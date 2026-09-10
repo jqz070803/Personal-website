@@ -65,10 +65,12 @@ artifacts/
 ### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图）
 ```
 v2-web/
-├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile）
-├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效；html.shot
+├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）
+├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；html.shot
 ├── v2-script.js           # 沿用 v1 交互，末尾新增两个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
+├── assets/
+│   └── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
 └── tools/
     └── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
 docs/
@@ -90,9 +92,10 @@ artifacts/
 - 山脊算法：**4～6 个宽主峰 + 11～15 个侧坡碎峰 + 8 阶 value noise**，谷底 `floor` 0.22～0.26 抬升 → 层叠山体而非均匀锯齿。
 - 视差：`start = hero 高度 × 0.75`，进度归一化后按 `data-px` 做 `translate3d`，rAF 节流、只改 transform。
 - 可读性：内容卡 `.section--tinted` 改半透明 `rgba(16,29,48,.62)` + `backdrop-filter: blur(10px) saturate(120%)`。
-- **足迹拼图**：`.journey-mosaic` 用 `grid-template-columns: repeat(12,1fr)` + `grid-auto-rows: var(--row)` 搭 **12×6 骨架**，10 张 `.ms-tile`（`--m1`～`--m10`，`--lg` 大字 / `--s` 只留标题 / `--big` 移动端通栏）用 `grid-area` **恰好铺满**；入场由 JS 按每张卡片相对中心的向量算出 `--dx/--dy/--sc`（四周涌入）+ 角度排序的 `--d` 错峰延迟，`cubic-bezier(.16,1,.3,1)` 1.15s 归位；手机端 760px 以下换 6 列骨架（`span 3` / `--big` 为 `span 6`）。
+- **足迹拼图**：`.journey-mosaic` 用 `grid-template-columns: repeat(12,1fr)` + `grid-auto-rows: var(--row)` 搭 **12×6 骨架**，10 张 `.ms-tile`（`--m1`～`--m10`，`--lg` 大字 / `--s` 只留标题 / `--big` 移动端通栏）用 `grid-area` **恰好铺满**；入场由 JS 按每张卡片相对中心的向量算出 `--dx/--dy/--sc`（四周涌入）+ 角度排序的 `--d` 错峰延迟（`STEP = 0.10s`），`cubic-bezier(.16,1,.3,1)` **1.6s** 归位；手机端 760px 以下换 6 列骨架（`span 3` / `--big` 为 `span 6`）。
+  - 每张卡已接入**真实照片**：媒体元素即 `<img class="ms-tile__media" src="assets/journey/…" alt="…" loading="lazy" decoding="async">`，`object-fit: cover` + 每张独立 `object-position: var(--pos)`（由 `.ms-tile--mN` 承载，兼作加载失败兜底底色）；`::after` 柔光挂在 `.ms-tile` 上，`.ms-tile__cap` 有 `z-index: 2`。
   - 拼图**几何自检**：`.deepworks/tmp/check-mosaic.html` 在 iframe 中按 `?cols/rows` 还原骨架，断言「外框齐边 + 每单元中心命中且仅命中一张 + 尺寸为整数单元 + 逐行带/列带首尾贴合」；1366 / 900 / 390 三视口全部通过（无空洞、无重叠）。
-- 迭代过程见 `docs/v2-progress-report.md` 的两个「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图为一次性需求，用户反馈驱动）。
+- 迭代过程见 `docs/v2-progress-report.md` 的**三个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨）。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
@@ -102,24 +105,33 @@ artifacts/
   该参数还会**强制打开视差背景**（`body.is-parallax-on`）、并让**足迹拼图跳过动画直接定格成拼好的矩形**，便于静态截图取证。
 - **山峦背景调参**：改 `v2-web/tools/gen-bg-parallax.py` 里的 `LAYERS`（峰数/宽窄/高度/噪声/谷底）与 `PALETTE`（配色），
   然后 `python v2-web/tools/gen-bg-parallax.py` 重新生成 `v2-index.html` 中的 `#bgParallax` 块（幂等，可反复运行）。
-- **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）。截图用系统 Edge 无头模式
-  （`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
+- **照片素材再生成**（幂等）：足迹照片由 `.deepworks/tmp/resize-photos.ps1` 批量缩放生成到 `v2-web/assets/journey/`；
+  改映射只改脚本里的 `$map`，然后 `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\resize-photos.ps1`。
+  规则：长边 1400px、`HighQualityBicubic`、JPEG 质量 82、读 EXIF `0x0112` 手动旋转。
+- **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）但**没有 `PIL`/Pillow** → 图像处理一律走 PowerShell `System.Drawing`。
+  ⚠️ **PowerShell 5.1 按 ANSI 读取 `.ps1`**：脚本里写中文会乱码报错，**只用 ASCII 注释**。
+  截图用系统 Edge 无头模式（`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
+- **Edge 无头截图三坑**（否则会拿到"假的成功截图"）：① 同一 `--user-data-dir` 会命中缓存 → **每次换唯一 profile**；
+  ② 截图**异步写盘**，进程退出时文件可能还是旧的 → **先删目标文件再轮询等新文件**；③ `Start-Process -ArgumentList` 不给含空格路径加引号 → 直接用 `& $edge … --screenshot="$out"`。
+  取证外壳 `.deepworks/tmp/shot.html` 会**先把 10 张足迹照片预热进 HTTP 缓存**再挂 iframe（`?preload=0` 关闭），避免拍到未解码的空块。
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
-- **v2**（2026-09-10 完成，同日三轮）：
+- **v2**（2026-09-10 完成，同日四轮）：
   1. 新增「学业 · 专业」整页板块（专业名片 / 核心课程 / 学习日常），导航新增"学业"锚点，原板块序号顺延；
   2. 追加首屏之后淡入的「太阳 + 分层细节山峦」**视差背景**（3 层 × 3 条脊线 + 日照金边），内容卡改半透明磨砂；
      移动端与 `prefers-reduced-motion` 降级；山峦由幂等脚本参数化生成；并把「学习日常」改写为**劳逸结合**；
-  3. 足迹板块改为**「苹果发布会式拼图」**：10 张不等尺寸圆角卡片用 12×6 Grid 恰好铺满，滚动到位后按各自方向**从四周涌入**、错峰归位拼成完整矩形（手机端 6 列骨架）。
-  桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）验证通过；已 git 存档（tag `v2`）。
+  3. 足迹板块改为**「苹果发布会式拼图」**：10 张不等尺寸圆角卡片用 12×6 Grid 恰好铺满，滚动到位后按各自方向**从四周涌入**、错峰归位拼成完整矩形（手机端 6 列骨架）；
+  4. 足迹接入**10 张用户实拍照片**（`v2-web/assets/journey/`，2.5MB）：渐变占位 → `<img>` + 逐张 `object-position` 裁切重心；
+     m6 文案改**「追光」**、m4 换新图（民俗巡游人海）并连锁重排（原文案图移到 m10）；动画按反馈调为**更慢更从容**（`STEP 0.10s`、归位 1.6s）。
+  桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）+ 控制台零错误验证通过；已 git 存档（tag `v2`）。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
-- **其它待办**：上传真实照片（首屏背景 + 足迹卡片占位图）、接入真实社交媒体链接。
+- **其它待办**：首屏主背景换成实拍照片、接入真实社交媒体链接。
 
 ## 7. 待办 / 下一步
-1. **[高] 上传真实照片**：用户将提供自己拍摄的山川湖海照片。
-   - 替换位置：`v2-web/v2-index.html` 中 `hero__bg` 背景 + 足迹拼图卡片的 `.ms-tile__media`（占位图，10 张）。
-   - 建议放入 `v2-web/assets/`（新建），并更新 CSS 中标注的 `TODO(v2)`；`.ms-tile__media` 换成 `<img class="ms-tile__media" src="..." alt="...">` 即可，`object-fit: cover` 已写好。
+1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
+   - 换图/调裁切：改 `.deepworks/tmp/resize-photos.ps1` 的 `$map` 重新生成，再调 `v2-style.css` 里对应 `.ms-tile--mN` 的 `--pos`。
+   - **仍待办**：首屏 `hero` 主背景仍是渐变/风格化背景，尚未换成实拍照片。
 2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。

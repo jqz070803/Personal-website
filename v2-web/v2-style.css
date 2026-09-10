@@ -715,9 +715,11 @@ html.shot .word-pen {
   border: 1px solid var(--line);
   box-shadow: var(--shadow-soft);
   background: var(--sky);
-  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.9s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.6s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.95s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
   transition-delay: var(--d, 0s);
   will-change: transform, opacity;
 }
@@ -801,56 +803,60 @@ html.shot .word-pen {
 }
 
 .ms-tile__media {
+  /* 直接就是 <img class="ms-tile__media" src="assets/journey/xx.jpg"> */
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  /* TODO(v2): 替换为真实照片 —— 换成 <img class="ms-tile__media" src="..." alt="..."> */
-}
-.ms-tile__media img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: var(--pos, center);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* 一点斜上方高光，让占位渐变更接近照片质感 */
-.ms-tile__media::after {
+/* 一点斜上方高光，让照片更通透 */
+.ms-tile::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(115% 85% at 20% 10%, rgba(255, 255, 255, 0.16), transparent 62%);
+  background: radial-gradient(115% 85% at 20% 10%, rgba(255, 255, 255, 0.14), transparent 62%);
   pointer-events: none;
 }
-/* 占位渐变（每张不同，待真实照片替换） */
-.ms-tile--m1 .ph {
+/* 兜底渐变（万一照片没加载出来，也不会露出空白）—— 同时决定每张照片的裁切重心 */
+.ms-tile--m1 {
   background-image: linear-gradient(155deg, #0a1c30, #12406b 46%, #4a86c8);
 }
-.ms-tile--m2 .ph {
+.ms-tile--m2 {
   background-image: linear-gradient(150deg, #07182b, #0b3b63 52%, #3f8fc4);
 }
-.ms-tile--m3 .ph {
+.ms-tile--m3 {
   background-image: linear-gradient(165deg, #04121f, #0a2f52 55%, #2f7fb8);
 }
-.ms-tile--m4 .ph {
+.ms-tile--m4 {
+  --pos: 50% 45%;
   background-image: linear-gradient(120deg, #0b1f38, #1c4f7a);
 }
-.ms-tile--m5 .ph {
+.ms-tile--m5 {
+  --pos: 50% 45%;
   background-image: linear-gradient(140deg, #040b16, #123a63 58%, #5b9bd5);
 }
-.ms-tile--m6 .ph {
+.ms-tile--m6 {
+  --pos: 50% 42%;
   background-image: linear-gradient(145deg, #0c2136, #2a5c86 55%, #8fb8d8);
 }
-.ms-tile--m7 .ph {
+.ms-tile--m7 {
+  --pos: 50% 68%;
   background-image: linear-gradient(150deg, #0a1929, #2e4d63 58%, #7a9bb3);
 }
-.ms-tile--m8 .ph {
+.ms-tile--m8 {
+  --pos: 50% 45%;
   background-image: linear-gradient(135deg, #081a26, #17605f 55%, #5fb0a0);
 }
-.ms-tile--m9 .ph {
+.ms-tile--m9 {
+  --pos: 50% 45%;
   background-image: linear-gradient(160deg, #10131f, #3c2f4f 50%, #c98a5e);
 }
-.ms-tile--m10 .ph {
+.ms-tile--m10 {
+  --pos: 50% 48%;
   background-image: linear-gradient(120deg, #0b1f38, #2f7fb8);
 }
 
@@ -864,6 +870,7 @@ html.shot .word-pen {
   background: linear-gradient(180deg, rgba(6, 16, 30, 0) 0%, rgba(6, 16, 30, 0.74) 78%);
   color: #fff;
   pointer-events: none;
+  z-index: 2;
 }
 .ms-tile__cap b {
   display: block;

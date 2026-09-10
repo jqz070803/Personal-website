@@ -440,7 +440,7 @@
   var isShot = /[?&]shot=1/.test(window.location.search);
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  var STEP = 0.055; /* 每张卡片之间的错峰间隔（秒） */
+  var STEP = 0.10; /* 每张卡片之间的错峰间隔（秒）：更明显的依次登场 */
   var maxDelay = 0;
   var armed = false;
 
@@ -490,7 +490,7 @@
     /* 全部归位后收尾：释放 will-change、切换成悬停微动的过渡 */
     window.setTimeout(function () {
       mosaic.classList.add("is-done");
-    }, maxDelay * 1000 + 1420);
+    }, maxDelay * 1000 + 1870);
   }
 
   /* 截图模式 / 减少动效：直接定格成拼好的矩形，不播放动画 */
