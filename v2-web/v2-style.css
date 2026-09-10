@@ -222,9 +222,10 @@ b {
   pointer-events: none;
   transition: opacity 1.2s ease;
   /* 压暗 + 轻微降饱和：影像是背景，不是主体。
-     亮度经实测调校：0.62 → 0.80（hero 区平均亮度 31/255 → 约 53/255），
-     风景细节可辨、白色文案对比度仍然充足。 */
-  filter: brightness(0.80) saturate(0.96) contrast(1.04);
+     亮度经两轮实测调校：0.62 → 0.80 → 0.90
+     （hero 区平均亮度 31 → 48.7 → 约 66/255），风景细节清晰、白色文案对比度仍然充足。
+     安全阈值：hero 区平均亮度不宜超过 ~75/255，否则浅色小号文字会开始发灰。 */
+  filter: brightness(0.90) saturate(0.98) contrast(1.06);
 }
 .hero.is-video .hero__video {
   opacity: 1;
@@ -241,17 +242,33 @@ b {
   opacity: 0;
   transition: opacity 1.2s ease;
   background:
-    radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.18), rgba(3, 9, 16, 0.54) 78%),
+    radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.14), rgba(3, 9, 16, 0.46) 78%),
     linear-gradient(
       180deg,
-      rgba(4, 10, 18, 0.44) 0%,
-      rgba(5, 13, 23, 0.24) 34%,
-      rgba(6, 16, 28, 0.34) 70%,
+      rgba(4, 10, 18, 0.28) 0%,
+      rgba(5, 13, 23, 0.14) 34%,
+      rgba(6, 16, 28, 0.22) 70%,
       #08131f 100%
     );
 }
 .hero.is-video .hero__veil {
   opacity: 1;
+}
+
+/* 窄屏保护：移动端文字更大更满、且常在高亮天空上，遮罩略加强以保住文字对比度。
+   注意底部仍是纯 #08131f —— 页 1→页 2 的接缝依据不受影响。 */
+@media (max-width: 720px) {
+  .hero__veil {
+    background:
+      radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.22), rgba(3, 9, 16, 0.54) 78%),
+      linear-gradient(
+        180deg,
+        rgba(4, 10, 18, 0.36) 0%,
+        rgba(5, 13, 23, 0.22) 34%,
+        rgba(6, 16, 28, 0.30) 70%,
+        #08131f 100%
+      );
+  }
 }
 
 /* 实拍影像启用后，星空让位（避免"星星叠在白天风景上"的违和） */
