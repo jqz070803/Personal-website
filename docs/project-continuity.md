@@ -62,24 +62,27 @@ artifacts/
     ├── v1-desktop-full.png   # 桌面端全页截图
     └── v1-mobile-full.png    # 移动端全页截图
 ```
-### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景）
+### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图）
 ```
 v2-web/
-├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块
-├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；html.shot
-├── v2-script.js           # 沿用 v1 交互，末尾新增独立视差 IIFE（data-px 位移 + is-parallax-on 淡入）
+├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile）
+├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效；html.shot
+├── v2-script.js           # 沿用 v1 交互，末尾新增两个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
 └── tools/
     └── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含两个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
     ├── v2-study-mobile.png      # 移动端（375 视口）学业板块
     ├── v2-menu-mobile.png       # 移动端汉堡菜单展开（含"学业"）
     ├── v2-parallax-desktop.png  # 桌面端滚过首屏：太阳 + 三层山峦淡入
-    └── v2-parallax-mobile.png   # 移动端 390 视口：山峦 + 太阳，无溢出
+    ├── v2-parallax-mobile.png   # 移动端 390 视口：山峦 + 太阳，无溢出
+    ├── v2-journey-desktop.png   # 桌面端足迹拼图（10 张圆角卡片拼成完整矩形）
+    ├── v2-journey-inflight.png  # 足迹拼图动画冻结在 22%：卡片仍在四周散开
+    └── v2-journey-mobile.png    # 移动端 390 视口足迹拼图（6 列骨架，同样成矩形）
 ```
 - 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
 - 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
@@ -87,14 +90,16 @@ artifacts/
 - 山脊算法：**4～6 个宽主峰 + 11～15 个侧坡碎峰 + 8 阶 value noise**，谷底 `floor` 0.22～0.26 抬升 → 层叠山体而非均匀锯齿。
 - 视差：`start = hero 高度 × 0.75`，进度归一化后按 `data-px` 做 `translate3d`，rAF 节流、只改 transform。
 - 可读性：内容卡 `.section--tinted` 改半透明 `rgba(16,29,48,.62)` + `backdrop-filter: blur(10px) saturate(120%)`。
-- 迭代过程见 `docs/v2-progress-report.md` 的「追加迭代」章节（r5→r6→r8→r9 四轮，用户反馈驱动）。
+- **足迹拼图**：`.journey-mosaic` 用 `grid-template-columns: repeat(12,1fr)` + `grid-auto-rows: var(--row)` 搭 **12×6 骨架**，10 张 `.ms-tile`（`--m1`～`--m10`，`--lg` 大字 / `--s` 只留标题 / `--big` 移动端通栏）用 `grid-area` **恰好铺满**；入场由 JS 按每张卡片相对中心的向量算出 `--dx/--dy/--sc`（四周涌入）+ 角度排序的 `--d` 错峰延迟，`cubic-bezier(.16,1,.3,1)` 1.15s 归位；手机端 760px 以下换 6 列骨架（`span 3` / `--big` 为 `span 6`）。
+  - 拼图**几何自检**：`.deepworks/tmp/check-mosaic.html` 在 iframe 中按 `?cols/rows` 还原骨架，断言「外框齐边 + 每单元中心命中且仅命中一张 + 尺寸为整数单元 + 逐行带/列带首尾贴合」；1366 / 900 / 390 三视口全部通过（无空洞、无重叠）。
+- 迭代过程见 `docs/v2-progress-report.md` 的两个「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图为一次性需求，用户反馈驱动）。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
 - **本地预览命令**（本项目固定端口 **8123**，在项目根目录执行）：
   `python -m http.server 8123`，然后访问 `http://127.0.0.1:8123/v2-web/v2-index.html`。
 - **截图模式**：URL 追加 `?shot=1`（如 `...v2-index.html?shot=1`）可立即显示所有区块并收敛首屏高度；
-  该参数还会**强制打开视差背景**（`body.is-parallax-on`），便于静态截图取证。
+  该参数还会**强制打开视差背景**（`body.is-parallax-on`）、并让**足迹拼图跳过动画直接定格成拼好的矩形**，便于静态截图取证。
 - **山峦背景调参**：改 `v2-web/tools/gen-bg-parallax.py` 里的 `LAYERS`（峰数/宽窄/高度/噪声/谷底）与 `PALETTE`（配色），
   然后 `python v2-web/tools/gen-bg-parallax.py` 重新生成 `v2-index.html` 中的 `#bgParallax` 块（幂等，可反复运行）。
 - **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）。截图用系统 Edge 无头模式
@@ -102,18 +107,19 @@ artifacts/
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
-- **v2**（2026-09-10 完成，同日两轮）：
+- **v2**（2026-09-10 完成，同日三轮）：
   1. 新增「学业 · 专业」整页板块（专业名片 / 核心课程 / 学习日常），导航新增"学业"锚点，原板块序号顺延；
   2. 追加首屏之后淡入的「太阳 + 分层细节山峦」**视差背景**（3 层 × 3 条脊线 + 日照金边），内容卡改半透明磨砂；
-     移动端与 `prefers-reduced-motion` 降级；山峦由幂等脚本参数化生成；并把「学习日常」改写为**劳逸结合**。
-  桌面 / 移动 / 移动菜单 / 视差多视图截图验证通过；已 git 存档（tag `v2`）。
+     移动端与 `prefers-reduced-motion` 降级；山峦由幂等脚本参数化生成；并把「学习日常」改写为**劳逸结合**；
+  3. 足迹板块改为**「苹果发布会式拼图」**：10 张不等尺寸圆角卡片用 12×6 Grid 恰好铺满，滚动到位后按各自方向**从四周涌入**、错峰归位拼成完整矩形（手机端 6 列骨架）。
+  桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）验证通过；已 git 存档（tag `v2`）。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：上传真实照片（首屏背景 + 足迹卡片占位图）、接入真实社交媒体链接。
 
 ## 7. 待办 / 下一步
 1. **[高] 上传真实照片**：用户将提供自己拍摄的山川湖海照片。
-   - 替换位置：`v2-web/v2-index.html` 中 `hero__bg` 背景 + `.journey-card__img`（足迹卡片占位图）。
-   - 建议放入 `v2-web/assets/`（新建），并更新 CSS 中标注的 `TODO(v1)`。
+   - 替换位置：`v2-web/v2-index.html` 中 `hero__bg` 背景 + 足迹拼图卡片的 `.ms-tile__media`（占位图，10 张）。
+   - 建议放入 `v2-web/assets/`（新建），并更新 CSS 中标注的 `TODO(v2)`；`.ms-tile__media` 换成 `<img class="ms-tile__media" src="..." alt="...">` 即可，`object-fit: cover` 已写好。
 2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。

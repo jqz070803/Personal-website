@@ -420,3 +420,128 @@
   measure();
   update();
 })();
+
+/* =========================================================
+   足迹拼图（v2 追加）
+   10 张大小不同的圆角卡片，在滚到该板块时“从四面八方涌入”，
+   按角度排序错峰归位，最终严丝合缝拼成一个完整矩形。
+   - 每张卡片的起点方向 = 它相对拼图中心的方向，距离按远近归一化；
+   - 位移用 translate3d + scale + blur，只走合成层，不动布局。
+   ========================================================= */
+(function () {
+  "use strict";
+
+  var mosaic = document.querySelector("[data-mosaic]");
+  if (!mosaic) return;
+
+  var tiles = Array.prototype.slice.call(mosaic.children);
+  if (!tiles.length) return;
+
+  var isShot = /[?&]shot=1/.test(window.location.search);
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var STEP = 0.055; /* 每张卡片之间的错峰间隔（秒） */
+  var maxDelay = 0;
+  var armed = false;
+
+  /* 用 offsetLeft/offsetTop 而不是 getBoundingClientRect：
+     后者会被已经施加的 transform 影响，导致起点被重复叠加。 */
+  function layout() {
+    var w = mosaic.offsetWidth;
+    var h = mosaic.offsetHeight;
+    if (!w || !h) return;
+
+    var spreadX = w * 0.46;
+    var spreadY = Math.max(h * 0.55, 240);
+    var angles = [];
+
+    tiles.forEach(function (el) {
+      var nx = (el.offsetLeft + el.offsetWidth / 2 - w / 2) / (w / 2);
+      var ny = (el.offsetTop + el.offsetHeight / 2 - h / 2) / (h / 2);
+      var len = Math.sqrt(nx * nx + ny * ny);
+      /* 位于正中心的卡片给一个固定角度，避免方向退化 */
+      var ang = len < 0.001 ? -2.1 : Math.atan2(ny, nx);
+      /* 越靠外的卡片飞得越远，但保底也有一段距离 */
+      var rad = Math.min(Math.max(len, 0.55), 1.5);
+      angles.push(ang);
+
+      el.style.setProperty("--dx", (Math.cos(ang) * rad * spreadX).toFixed(1) + "px");
+      el.style.setProperty("--dy", (Math.sin(ang) * rad * spreadY).toFixed(1) + "px");
+      el.style.setProperty("--sc", (0.9 - rad * 0.05).toFixed(3));
+    });
+
+    /* 按角度排序 → 像一圈涟漪依次涌入，而不是从上到下扫过 */
+    var order = angles
+      .map(function (a, i) {
+        return i;
+      })
+      .sort(function (a, b) {
+        return angles[a] - angles[b];
+      });
+    order.forEach(function (idx, rank) {
+      var d = rank * STEP;
+      tiles[idx].style.setProperty("--d", d.toFixed(3) + "s");
+      if (d > maxDelay) maxDelay = d;
+    });
+  }
+
+  function play() {
+    mosaic.classList.add("is-in");
+    /* 全部归位后收尾：释放 will-change、切换成悬停微动的过渡 */
+    window.setTimeout(function () {
+      mosaic.classList.add("is-done");
+    }, maxDelay * 1000 + 1420);
+  }
+
+  /* 截图模式 / 减少动效：直接定格成拼好的矩形，不播放动画 */
+  if (isShot || reduce) {
+    tiles.forEach(function (el) {
+      el.style.transition = "none";
+    });
+    mosaic.classList.add("is-in", "is-done");
+    return;
+  }
+
+  /* 先算好起点，再上锁（is-armed）——顺序不能反，否则量到的是位移后的位置 */
+  layout();
+  armed = true;
+  mosaic.classList.add("is-armed");
+
+  /* 窗口尺寸变化时重算起点（已归位后就不必再算） */
+  var rt;
+  window.addEventListener("resize", function () {
+    if (mosaic.classList.contains("is-in")) return;
+    window.clearTimeout(rt);
+    rt = window.setTimeout(layout, 180);
+  });
+
+  function start() {
+    layout(); /* 用滚动到位时的最终尺寸再校正一次 */
+    play();
+  }
+
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            io.unobserve(entry.target);
+            start();
+          }
+        });
+      },
+      { threshold: 0.16 }
+    );
+    io.observe(mosaic);
+  } else {
+    start();
+  }
+
+  /* 保险：万一 IntersectionObserver 没有触发（老浏览器/异常），
+     2.5 秒后自动播放，避免内容一直停在不可见状态 */
+  if (armed) {
+    window.setTimeout(function () {
+      if (!mosaic.classList.contains("is-in")) start();
+    }, 2500);
+  }
+})();

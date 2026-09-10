@@ -693,58 +693,209 @@ html.shot .word-pen {
 }
 
 /* =========================================================
-   足迹
+   足迹 —— 苹果发布会式拼图
+   10 张不同尺寸的圆角卡片，滚动到位后从四周涌入、
+   带阶梯延迟归位，最后严丝合缝拼成一个完整矩形。
    ========================================================= */
-.journey-grid {
+.journey-mosaic {
+  /* 12 列 × 6 行的骨架：每张卡片的 grid-area 刚好铺满，不留空洞 */
+  --row: clamp(56px, 6.1vw, 82px);
+  --gap: 14px;
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 240px;
-  gap: 18px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: var(--row);
+  gap: var(--gap);
 }
-.journey-card {
+
+.ms-tile {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius);
+  border-radius: 20px; /* 圆角 */
   border: 1px solid var(--line);
   box-shadow: var(--shadow-soft);
+  background: var(--sky);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.9s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
+  transition-delay: var(--d, 0s);
+  will-change: transform, opacity;
 }
-.journey-card--wide {
-  grid-column: span 2;
+
+/* 入场前：停在“四面八方”的起点上（由 JS 加 is-armed 后才隐藏，
+   保证禁用 JS / 脚本出错时内容照常可见） */
+.journey-mosaic.is-armed .ms-tile {
+  opacity: 0;
+  transform: translate3d(var(--dx, 0px), var(--dy, 0px), 0) scale(var(--sc, 0.88));
 }
-.journey-card__img {
+.journey-mosaic.is-in .ms-tile {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+/* 桌面端额外加一点起飞虚化，更“丝滑” */
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  .journey-mosaic.is-armed .ms-tile {
+    filter: blur(14px);
+  }
+  .journey-mosaic.is-in .ms-tile {
+    filter: blur(0);
+  }
+}
+
+/* 归位完成后：释放 will-change，换成更利落的过渡以支持悬停微动 */
+.journey-mosaic.is-done .ms-tile {
+  will-change: auto;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.55s ease;
+}
+@media (hover: hover) {
+  .journey-mosaic.is-done .ms-tile:hover {
+    transform: translateY(-6px) scale(1.012);
+    box-shadow: 0 26px 50px rgba(4, 14, 28, 0.5);
+    z-index: 2;
+  }
+  .journey-mosaic.is-done .ms-tile:hover .ms-tile__media {
+    transform: scale(1.05);
+  }
+}
+
+/* 拼图骨架：12 列 × 6 行，正好铺满（无空洞） */
+.ms-tile--m1 {
+  grid-column: 1 / 6;
+  grid-row: 1 / 4;
+}
+.ms-tile--m2 {
+  grid-column: 6 / 10;
+  grid-row: 1 / 3;
+}
+.ms-tile--m3 {
+  grid-column: 10 / 13;
+  grid-row: 1 / 4;
+}
+.ms-tile--m4 {
+  grid-column: 6 / 10;
+  grid-row: 3 / 4;
+}
+.ms-tile--m5 {
+  grid-column: 1 / 4;
+  grid-row: 4 / 5;
+}
+.ms-tile--m6 {
+  grid-column: 4 / 10;
+  grid-row: 4 / 6;
+}
+.ms-tile--m7 {
+  grid-column: 10 / 13;
+  grid-row: 4 / 5;
+}
+.ms-tile--m8 {
+  grid-column: 1 / 4;
+  grid-row: 5 / 7;
+}
+.ms-tile--m9 {
+  grid-column: 10 / 13;
+  grid-row: 5 / 7;
+}
+.ms-tile--m10 {
+  grid-column: 4 / 10;
+  grid-row: 6 / 7;
+}
+
+.ms-tile__media {
   position: absolute;
   inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  /* TODO(v2): 替换为真实照片 —— 换成 <img class="ms-tile__media" src="..." alt="..."> */
+}
+.ms-tile__media img {
+  display: block;
+  width: 100%;
   height: 100%;
+  object-fit: cover;
 }
-.journey-card__img.ph {
-  background: linear-gradient(135deg, #0d2136, #0a84ff 60%, #5b9bd5);
-  /* TODO(v1): 替换为真实照片 */
+/* 一点斜上方高光，让占位渐变更接近照片质感 */
+.ms-tile__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(115% 85% at 20% 10%, rgba(255, 255, 255, 0.16), transparent 62%);
+  pointer-events: none;
 }
-.journey-card:nth-child(3) .journey-card__img.ph {
-  background: linear-gradient(135deg, #081627, #0a84ff 55%, #9ec8ff);
+/* 占位渐变（每张不同，待真实照片替换） */
+.ms-tile--m1 .ph {
+  background-image: linear-gradient(155deg, #0a1c30, #12406b 46%, #4a86c8);
 }
-.journey-card:nth-child(4) .journey-card__img.ph {
-  background: linear-gradient(135deg, #081627, #3a7bd5 70%, #7bb0e8);
+.ms-tile--m2 .ph {
+  background-image: linear-gradient(150deg, #07182b, #0b3b63 52%, #3f8fc4);
 }
-.journey-card__cap {
+.ms-tile--m3 .ph {
+  background-image: linear-gradient(165deg, #04121f, #0a2f52 55%, #2f7fb8);
+}
+.ms-tile--m4 .ph {
+  background-image: linear-gradient(120deg, #0b1f38, #1c4f7a);
+}
+.ms-tile--m5 .ph {
+  background-image: linear-gradient(140deg, #040b16, #123a63 58%, #5b9bd5);
+}
+.ms-tile--m6 .ph {
+  background-image: linear-gradient(145deg, #0c2136, #2a5c86 55%, #8fb8d8);
+}
+.ms-tile--m7 .ph {
+  background-image: linear-gradient(150deg, #0a1929, #2e4d63 58%, #7a9bb3);
+}
+.ms-tile--m8 .ph {
+  background-image: linear-gradient(135deg, #081a26, #17605f 55%, #5fb0a0);
+}
+.ms-tile--m9 .ph {
+  background-image: linear-gradient(160deg, #10131f, #3c2f4f 50%, #c98a5e);
+}
+.ms-tile--m10 .ph {
+  background-image: linear-gradient(120deg, #0b1f38, #2f7fb8);
+}
+
+.ms-tile__cap {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 50px 22px 20px;
-  background: linear-gradient(180deg, transparent, rgba(8, 22, 39, 0.9));
+  padding: 34px 12px 11px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(6, 16, 30, 0) 0%, rgba(6, 16, 30, 0.74) 78%);
   color: #fff;
+  pointer-events: none;
 }
-.journey-card__cap b {
+.ms-tile__cap b {
   display: block;
-  font-size: 1.35rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
   letter-spacing: 0.02em;
 }
-.journey-card__cap span {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
+.ms-tile__cap span {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.76);
+}
+/* 大卡片：标题更大、留白更多 */
+.ms-tile--lg .ms-tile__cap {
+  padding: 46px 16px 16px;
+}
+.ms-tile--lg .ms-tile__cap b {
+  font-size: 1.3rem;
+}
+.ms-tile--lg .ms-tile__cap span {
+  font-size: 0.84rem;
+}
+/* 单行矮卡片：只留标题，避免文字压住画面 */
+.ms-tile--s .ms-tile__cap {
+  padding: 22px 10px 8px;
+}
+.ms-tile--s .ms-tile__cap b {
+  font-size: 0.87rem;
+}
+.ms-tile--s .ms-tile__cap span {
+  display: none;
 }
 .journey-note {
   text-align: center;
@@ -1133,12 +1284,25 @@ html.shot .word-pen {
     gap: 14px;
   }
 
-  .journey-grid {
-    grid-template-columns: 1fr;
-    grid-auto-rows: 200px;
+  /* 足迹拼图：手机端换成 6 列骨架（大图通栏），依旧拼成完整矩形 */
+  .journey-mosaic {
+    --row: clamp(46px, 8.4vw, 60px);
+    --gap: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
-  .journey-card--wide {
-    grid-column: span 1;
+  .ms-tile {
+    grid-column: span 3;
+    grid-row: span 2;
+    border-radius: 16px;
+  }
+  .ms-tile--big {
+    grid-column: span 6;
+  }
+  .ms-tile--lg .ms-tile__cap {
+    padding: 40px 14px 13px;
+  }
+  .ms-tile--lg .ms-tile__cap b {
+    font-size: 1.05rem;
   }
 
   .agent-box {
