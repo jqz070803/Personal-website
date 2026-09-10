@@ -24,8 +24,8 @@
 - 保留"游历天下 + 温暖同伴"的双面人设，但呈现方式要克制。
 
 ## 3. 课程阶段（Vibe Coding 大纲，评分项）
-- **V1** = MVP 最小可行产品（★ 本次已完成）。评分：MVP、Git checkpoint、AI、数字孪生、GitHub、Feedback 等。
-- **V2** = Git / checkpoint（"后悔药"存档）+ 继续完善功能。
+- **V1** = MVP 最小可行产品（★ 已完成）。评分：MVP、Git checkpoint、AI、数字孪生、GitHub、Feedback 等。
+- **V2** = Git / checkpoint（"后悔药"存档）+ 继续完善功能（★ 已完成：新增「学业 · 专业」整页板块 + 导航"学业"入口）。
 - **V3** = Supabase Dashboard + Feedback（接入后端、数据看板、意见反馈）。
 - **V4** = 数字孪生 / AI 集成（把 AI 能力真正融入页面）。
 
@@ -34,7 +34,8 @@
 - **下一次迭代（v2 开新对话）时，所有文件改为 `v2` 开头**，依此类推到 v3、v4。
 - 每版都需在 `docs/` 下追加进度记录，并在 `artifacts/screenshots/` 保存截图。
 
-## 5. 当前文件清单（v1 已完成）
+## 5. 当前文件清单
+### v1（已完成）
 ```
 v1-web/
 ├── v1-index.html          # 主页 HTML（含首屏/关于/足迹/镜头/社交/智能体/联系/页脚，导航居中无品牌名）
@@ -42,12 +43,28 @@ v1-web/
 ├── v1-script.js           # 交互：导航、汉堡菜单、滚动显现、数字滚动、社交占位
 └── assets/                # (空) 预留照片与资源目录
 docs/
-└── v1-progress-report.md  # 本次迭代进度报告
+└── v1-progress-report.md  # v1 迭代进度报告
 artifacts/
 └── screenshots/
     ├── v1-desktop-full.png   # 桌面端全页截图
     └── v1-mobile-full.png    # 移动端全页截图
 ```
+### v2（已完成：新增「学业 · 专业」整页板块）
+```
+v2-web/
+├── v2-index.html          # 在"关于"之后新增 #study 学业板块；导航新增"学业"；板块序号顺延(学业02…联系08)
+├── v2-style.css           # 追加 .study-id/.study-grid/.course-list/.daily-list 等样式与响应式；补 html.shot 规则
+├── v2-script.js           # 与 v1 逻辑一致，仅更新版本注释
+└── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
+docs/
+└── v2-progress-report.md  # v2 迭代进度报告
+artifacts/
+└── screenshots/
+    ├── v2-study-desktop.png  # 桌面端「学业 · 专业」板块
+    ├── v2-study-mobile.png   # 移动端（375 视口）学业板块
+    └── v2-menu-mobile.png    # 移动端汉堡菜单展开（含"学业"）
+```
+- v2 板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + 学习日常。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v1-index.html` 或起本地 HTTP 服务即可预览。
@@ -55,7 +72,13 @@ artifacts/
   然后访问 `http://127.0.0.1:8080/v1-index.html`。
 - **截图模式**：URL 追加 `?shot=1`（如 `...v1-index.html?shot=1`）可立即显示所有区块并收敛首屏高度，便于截图/打印。
 
-## 7. 待办 / 下一步（v2 建议）
+## 6.5 版本进展快照
+- **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
+- **v2**（2026-09-10 完成）：新增「学业 · 专业」整页板块（专业名片 / 核心课程 / 学习日常），
+  导航新增"学业"锚点，原板块序号顺延；桌面 + 移动 + 移动菜单三视图截图验证通过；已 git 存档。
+- **v3（下一步）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
+
+## 7. 待办 / 下一步
 1. **[高] 上传真实照片**：用户将提供自己拍摄的山川湖海照片。
    - 替换位置：`v1-web/v1-index.html` 中 `hero__bg` 背景 + `.journey-card__img`（足迹卡片占位图）。
    - 建议放入 `v1-web/assets/` 或 `v1-web/images/`，并更新 CSS 中标注的 `TODO(v1)`。
