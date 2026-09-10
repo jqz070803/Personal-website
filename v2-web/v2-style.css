@@ -206,6 +206,59 @@ b {
     linear-gradient(180deg, rgba(8, 22, 39, 0.25) 0%, rgba(8, 22, 39, 0.65) 100%);
 }
 
+/* ---------- 实拍视频背景（首屏 · v2 追加）----------
+   静音、循环、铺满、object-fit: cover；只作氛围底，永远压暗，
+   保证文字（.hero__inner，z-index: 2）始终是主角。
+   默认 opacity: 0 —— 只有 JS 成功接管播放时才加 .hero.is-video 淡入；
+   否则自动回落到上面的夜景渐变，绝不出现黑屏。 */
+.hero__video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+  /* 压暗 + 轻微降饱和：影像是背景，不是主体 */
+  filter: brightness(0.62) saturate(0.92) contrast(1.02);
+}
+.hero.is-video .hero__video {
+  opacity: 1;
+}
+
+/* 遮罩层：四周压暗、中部留亮，让文案区对比度足够。
+   关键 —— 底部收在 #08131f，与第二页视差天幕 .bg-parallax__sky 顶色完全一致，
+   首屏滚走时影像自然"融进"天空，页 1 → 页 2 看不出接缝。 */
+.hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  background:
+    radial-gradient(ellipse 68% 46% at 50% 46%, rgba(3, 9, 16, 0.30), rgba(3, 9, 16, 0.66) 78%),
+    linear-gradient(
+      180deg,
+      rgba(4, 10, 18, 0.62) 0%,
+      rgba(5, 13, 23, 0.42) 34%,
+      rgba(6, 16, 28, 0.52) 70%,
+      #08131f 100%
+    );
+}
+.hero.is-video .hero__veil {
+  opacity: 1;
+}
+
+/* 实拍影像启用后，星空让位（避免"星星叠在白天风景上"的违和） */
+.hero.is-video .hero__stars {
+  opacity: 0;
+  animation: none;
+  transition: opacity 1.2s ease;
+}
+
 /* 设计感背景：星空（铺满、缓慢呼吸） */
 .hero__stars {
   position: absolute;
@@ -1360,6 +1413,13 @@ html.shot .hero__inner {
 }
 html.shot .hero__mountains {
   height: 40vh;
+}
+/* 截图模式下去掉淡入过渡：视频/遮罩立即定格在终态，
+   避免无头截图抓到 opacity 还在中间的画面（也会影响打印）。 */
+html.shot .hero__video,
+html.shot .hero__veil,
+html.shot .hero__stars {
+  transition: none;
 }
 @media (max-width: 760px) {
   html.shot .hero__inner {

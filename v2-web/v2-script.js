@@ -545,3 +545,73 @@
     }, 2500);
   }
 })();
+
+/* =========================================================
+   首屏视频背景（v2 追加）
+   静音循环播放 assets/hero/hero-loop.mp4，成功接管后才给 .hero 加
+   is-video 淡入（视频层 + 压暗遮罩同时显现，星空让位）。
+   - 自动播放被拦截 / 解码失败 → 不加 is-video，静默回落到夜景渐变；
+   - ?shot=1（截图）与 prefers-reduced-motion → 只显示封面静帧，不播放；
+   - 标签页切到后台时暂停，回来续播（省电，且不产生跳帧）。
+   ========================================================= */
+(function () {
+  "use strict";
+
+  var hero = document.querySelector(".hero");
+  if (!hero) return;
+
+  var video = hero.querySelector(".hero__video");
+  if (!video) return;
+
+  var isShot = /[?&]shot=1/.test(window.location.search);
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function show() {
+    hero.classList.add("is-video");
+  }
+  function hide() {
+    hero.classList.remove("is-video");
+  }
+
+  /* 播放/加载失败 → 安静回落到原有渐变背景，不抛错 */
+  video.addEventListener("error", hide);
+  var source = video.querySelector("source");
+  if (source) source.addEventListener("error", hide);
+
+  /* 背景视频必须静音，否则任何浏览器都不允许自动播放 */
+  video.muted = true;
+  video.setAttribute("muted", "");
+  video.setAttribute("playsinline", "");
+
+  /* 截图模式 / 减少动效：定格在封面帧，画面确定且可复现 */
+  if (isShot || reduce) {
+    try {
+      video.pause();
+    } catch (e) {
+      /* 忽略：暂停失败不影响静帧展示 */
+    }
+    show();
+    return;
+  }
+
+  var started = video.play();
+  if (started && typeof started.then === "function") {
+    started.then(show, hide);
+  } else {
+    show();
+  }
+
+  /* 切到后台暂停、切回续播：避免常驻解码耗电 */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      video.pause();
+      return;
+    }
+    var again = video.play();
+    if (again && typeof again.catch === "function") {
+      again.catch(function () {
+        /* 续播被拒也不影响：保持当前静帧 */
+      });
+    }
+  });
+})();

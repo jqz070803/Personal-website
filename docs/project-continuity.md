@@ -65,9 +65,9 @@ artifacts/
 ### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图）
 ```
 v2-web/
-├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）
-├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；html.shot
-├── v2-script.js           # 沿用 v1 交互，末尾新增两个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）
+├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）
+├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；html.shot
+├── v2-script.js           # 沿用 v1 交互，末尾新增三个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
 ├── assets/
 │   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
@@ -87,6 +87,8 @@ artifacts/
     ├── v2-journey-desktop.png   # 桌面端足迹拼图（10 张圆角卡片拼成完整矩形）
     ├── v2-journey-inflight.png  # 足迹拼图动画冻结在 22%：卡片仍在四周散开
     └── v2-journey-mobile.png    # 移动端 390 视口足迹拼图（6 列骨架，同样成矩形）
+    ├── v2-hero-video-desktop.png# 桌面端首屏实拍视频背景（1440×900，?shot=1）
+    └── v2-hero-video-mobile.png # 移动端首屏实拍视频背景（390×844，?shot=1）
 ```
 - 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
 - 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
@@ -114,6 +116,11 @@ artifacts/
   `powershell -ExecutionPolicy Bypass -File v2-web\tools\build-hero-loop.ps1`
   → 重新产出 `v2-web/assets/hero/hero-loop.mp4` + `hero-poster.jpg`。
   想换镜头/时长：改脚本顶部 `$edl`（`起点秒, 时长秒` 交替）与 `$fade`。**脚本不烧字、不用字体、不写系统目录**（无权限要求）。
+- **无头截图**：`powershell -ExecutionPolicy Bypass -File .deepworks\tmp\shot.ps1 -Url <url> -Out <png> -W 1440 -H 900`
+  （自动用唯一 profile + 绝对路径 + 轮询等文件；`.deepworks/tmp/` 已被 gitignore）。
+- **判断改动是否真的生效（不靠肉眼）**：`.deepworks/tmp/probe_server.py`（`127.0.0.1:8125`，`/slow` 慢速资源撑住 `load` 事件 + `/report` 收结果）
+  配合 `.deepworks/tmp/verify-hero.html`（同源 iframe 探针，把 `getComputedStyle` 等断言 POST 回 `.deepworks/tmp/hero-report.txt`）。
+  ⚠️ **别用 `--virtual-time-budget` 测 CSS 过渡**（会读到卡在起始值的假象），也别指望 `--dump-dom` 能拿到 stdout（Edge 是 detached 启动的）。
 - **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）但**没有 `PIL`/Pillow** → 图像处理一律走 PowerShell `System.Drawing`。
   ⚠️ **PowerShell 5.1 按 ANSI 读取 `.ps1`**：脚本里写中文会乱码报错，**只用 ASCII 注释**。
   截图用系统 Edge 无头模式（`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
@@ -131,16 +138,20 @@ artifacts/
   4. 足迹接入**10 张用户实拍照片**（`v2-web/assets/journey/`，2.5MB）：渐变占位 → `<img>` + 逐张 `object-position` 裁切重心；
       m6 文案改**「追光」**、m4 换新图（民俗巡游人海）并连锁重排（原文案图移到 m10）；动画按反馈调为**更慢更从容**（`STEP 0.10s`、归位 1.6s）。
   桌面 / 移动 / 移动菜单 / 视差 / 足迹拼图多视图截图 + 拼图几何自检（三视口无空洞）+ 控制台零错误验证通过；已 git 存档（tag `v2`）。
-  5. **首屏 hero 视频背景 · 素材已就绪（页面接入待做）**：从 216s 原始混剪中精选 **10 段干净风景**（无字幕卡/无正脸）用 0.8s 交叉淡化拼成 **54.8s 循环**，
-     转码为 H.264 / 854×480 / 无音轨 / faststart 的 **8.1MB** 单文件（`v2-web/assets/hero/hero-loop.mp4`），构建脚本 `v2-web/tools/build-hero-loop.ps1` 幂等可复现。
+  5. **首屏 hero 视频背景（已完成，含页面接入）**：从 216s 原始混剪精选 **10 段干净风景**（无字幕卡/无正脸），用 0.8s 交叉淡化拼成 **54.8s 循环**，
+     转码为 H.264 / 854×480 / 无音轨 / faststart 的 **8.1MB** 单文件（`v2-web/assets/hero/hero-loop.mp4`）；构建脚本 `v2-web/tools/build-hero-loop.ps1` 幂等可复现。
+     **已接进页面**：`.hero__video`（最底层）+ `.hero__veil`（压暗遮罩，底部 `#08131f` 与第二页天幕同色 → 页 1→页 2 无接缝）+ JS 第四个 IIFE
+     （`play()` resolve 才淡入；被拒/失败/`?shot=1`/`prefers-reduced-motion` 一律静默回落到原渐变背景）。视频随首屏滚走，**不会跟到第二页**。
+     断言（iframe 探针）+ 像素统计（hero 区 `stdev=40.2` vs 渐变区 `6.7`）双重验证通过，详见 `docs/v2-progress-report.md` 第四次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
-- **其它待办**：把首屏 hero 视频背景**接进页面**（HTML/CSS/JS，步骤见 `docs/v2-progress-report.md` 第四次追加迭代）、接入真实社交媒体链接。
+- **其它待办**：接入真实社交媒体链接。
 
 ## 7. 待办 / 下一步
 1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
    - 换图/调裁切：改 `.deepworks/tmp/resize-photos.ps1` 的 `$map` 重新生成，再调 `v2-style.css` 里对应 `.ms-tile--mN` 的 `--pos`。
-   - **仍待办**：首屏 `hero` 主背景仍是渐变/风格化背景。—— 现已升级为**视频背景**方案：
-     素材已就绪（`v2-web/assets/hero/`，见 §5），**页面接入待做**（HTML/CSS/JS 步骤见 `docs/v2-progress-report.md` 第四次追加迭代）。
+   - **[已完成] 首屏 `hero` 主背景**：已升级为**实拍循环视频背景**（`v2-web/assets/hero/hero-loop.mp4`，
+     由 `.hero__video` + `.hero__veil` 承载，JS 控制可见性与全部降级路径）。
+     原渐变背景**保留**为兜底：自动播放被拒 / `prefers-reduced-motion` / 解码失败时自动回落，不会黑屏。
 2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
@@ -184,3 +195,7 @@ artifacts/
 - **当前预览地址**：`http://127.0.0.1:8123/v2-web/v2-index.html`（v1 路径仅作历史参考）。
 - **改山峦背景**：改 `v2-web/tools/gen-bg-parallax.py` 的 `LAYERS`/`PALETTE` → 跑 `python v2-web/tools/gen-bg-parallax.py`；
   脚本幂等（先删后插），连续运行输出字节一致。
+- **改首屏视频**：换镜头/时长改 `v2-web/tools/build-hero-loop.ps1` 顶部 `$edl`/`$fade` 后重跑；
+  只调"压暗程度/遮罩"改 `v2-style.css` 里 `.hero__video` 的 `filter: brightness(...)` 与 `.hero__veil` 的渐变 alpha 即可，**无需重新编码视频**。
+- **验证改动的正确姿势**（血泪教训）：`--virtual-time-budget` 会让 CSS 过渡卡在起始值 → **误判成 bug**；
+  `--dump-dom` 在 detached 启动下拿不到 stdout → 必须用 `probe_server.py` + `verify-hero.html` 走 HTTP 回报。

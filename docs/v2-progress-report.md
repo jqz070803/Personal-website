@@ -351,15 +351,66 @@ artifacts/
 - `v2-web/tools/build-hero-loop.ps1` —— **幂等、可复现**构建脚本（EDL / 交叉时长在文件顶部常量）；
   **不依赖字体、不写系统目录**，重跑输出字节一致，已实测复跑一次确认。
 
-### ⏭️ 页面接入（下一步，本次**未做**，留待下次继续）
-1. `v2-index.html`：在 `.hero__bg` 之后插入
-   `<video class="hero__video" autoplay muted loop playsinline preload="auto" poster="assets/hero/hero-poster.jpg">`（`<source>` 指向 `assets/hero/hero-loop.mp4`）+ 一个 `.hero__veil` 压暗遮罩层。
-2. `v2-style.css`：`.hero__video{position:absolute;inset:0;object-fit:cover;z-index:0;filter:brightness(.62) saturate(.92)}`；
-   `.hero__veil` 用 `linear-gradient(180deg, rgba(4,10,18,.46) 0%, …, #08131f 100%)` —— **底部收在与第二页 `.bg-parallax__sky` 顶色 `#08131f` 相同**，实现页 1→页 2 的丝滑衔接；
-   `.hero.is-video .hero__stars{opacity:0;animation:none}`（实拍影像启用后星空让位）；`.hero__mountains` 保留（剪影盖住视频底边、增加纵深）。
-3. `v2-script.js`：新增一个 IIFE —— 视频可播放时给 `.hero` 加 `is-video`；`?shot=1` 或 `prefers-reduced-motion` 时 `pause()` 并回退到 poster；自动播放被浏览器拦截时保持 poster 不报错。
-4. 视频随 `.hero` 一起滚走（`position:absolute` + `.hero{overflow:hidden}` 天然满足"只留在第一页"）。
-5. 完成后：`?shot=1` 截图（桌面+移动）、控制台零错误验证 → 更新文档 → commit → 用内置浏览器打开预览给用户确认。
+### ✅ 页面接入（已完成）
+1. **`v2-index.html`**（`.hero__bg` 之后、星空之前）插入：
+   ```html
+   <video class="hero__video" autoplay muted loop playsinline preload="auto"
+          poster="assets/hero/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+     <source src="assets/hero/hero-loop.mp4" type="video/mp4" />
+   </video>
+   <div class="hero__veil" aria-hidden="true"></div>
+   ```
+2. **`v2-style.css`** 新增三条规则（插在 hero 段落，`.hero__stars` 定义之前）：
+   - `.hero__video` —— `position:absolute; inset:0; object-fit:cover; z-index:0; opacity:0; pointer-events:none;
+     transition:opacity 1.2s ease; filter:brightness(.62) saturate(.92) contrast(1.02)`；
+     **默认透明**是安全设计 —— 只有 JS 成功接管播放时才由 `.hero.is-video .hero__video{opacity:1}` 淡入。
+   - `.hero__veil` —— 压暗遮罩：中部放射渐变（中心 α.30 / 边缘 α.66）+ 纵向渐变
+     `rgba(4,10,18,.62) → rgba(5,13,23,.42) → rgba(6,16,28,.52) → #08131f`；
+     **底部收在 `#08131f`，与第二页 `.bg-parallax__sky` 顶色完全一致**（实测第二页 `.about-screen__bg` 顶色
+     ≈ `#071320`，与 `#08131f` 仅差 1/255，肉眼无接缝）。
+   - `.hero.is-video .hero__stars{opacity:0; animation:none; transition:opacity 1.2s ease}` —— 实拍启用后星空让位，避免"星星叠在白天风景上"。
+   - `html.shot .hero__video/.hero__veil/.hero__stars{transition:none}` —— **截图模式去掉过渡**，避免无头截图抓到淡入中间态。
+3. **`v2-script.js`** 末尾新增第 4 个 IIFE（首屏视频控制）：
+   - 强制 `muted` + `playsinline`（背景视频不静音则浏览器一律禁止自动播放）；
+   - `video.play()` 返回的 Promise **resolve 时才加 `.hero.is-video`**，**reject 时静默移除**（回落夜景渐变，绝不黑屏）；
+   - `video` / `<source>` 的 `error` 事件同样触发回落；
+   - `?shot=1` 或 `prefers-reduced-motion` → `pause()` + 直接显示封面静帧（画面确定、可复现、不耗电）；
+   - `visibilitychange` 切后台暂停、切回续播。
+4. **"只留在第一页" 天然满足**：视频是 `.hero` 内的 `position:absolute` 子元素，`.hero{overflow:hidden}`，
+   随首屏一起滚走，不会跟随到第二页。
+
+### 🔬 验证证据（**已通过**，非目测）
+用 `.deepworks/tmp/verify-hero.html`（同源 iframe 探针）+ `.deepworks/tmp/probe_server.py`（回报端点）
+在 Edge headless 中做断言，并把结果 POST 回文件：
+
+- **实时模式**（`?` 无参数，`--autoplay-policy=no-user-gesture-required`）：
+  | 时刻 | hero.className | video opacity | paused | readyState | 尺寸 | currentTime |
+  | :-- | :-- | --: | :-- | --: | :-- | --: |
+  | 加载 158ms | `hero is-video` | 0（淡入中） | false | 4 | 854×480 | 0.003 |
+  | +2.5s | `hero is-video` | **1** | false | 4 | 854×480 | 2.507 |
+  | +6s | `hero is-video` | **1** | false | 4 | 854×480 | 6.017 |
+  - `veil opacity` 在 +2.5s 起 = **1**；`stars opacity = 0`；`inner zIndex = 2`；视频盒子 `1425×900 @ (0,0)` = **完整铺满首屏**；
+    `muted=true`、`error=null`、`duration=54.8`；CSS 中三条 `is-video` 规则均已加载匹配。
+- **截图模式**（`?shot=1`）：`video opacity=1 / transition 0s / paused=true / readyState=4`，`body` 带 `is-parallax-on` —— 定格可复现。
+- **像素统计反证**（`System.Drawing` 采样截图，排除"其实没渲染出来"）：
+  - 桌面 hero 区（y 60–500）：`meanLum=31.2  stdev=40.2  distinctColors=102`
+  - 桌面下方（视差渐变区对照）：`meanLum=23.4  stdev=6.7  distinctColors=33`
+  - 移动 hero 区：`meanLum=45.9  stdev=56.9  distinctColors=148`
+  → hero 区**方差远高于**渐变区，证明渲染的是实拍画面而非平滑渐变。
+- **HTTP**：`hero-loop.mp4 → 200 video/mp4`、`hero-poster.jpg → 200 image/jpeg`、页面 `200`。
+
+### ⚠️ 无头验证踩坑（写给下一位，省 1 小时）
+- **`--virtual-time-budget` 下 CSS 过渡不可靠**：`getComputedStyle().opacity` 会长时间停在**起始值**（本项目实测 veil 一直报 0，
+  而真实浏览器 2.5s 就到 1），**极易误判成 CSS bug**。→ 需要真实时间测量时，用 `probe_server.py` 的 `/slow`
+  慢速资源（`sleep 20s` 的 1×1 gif）把父页 `load` 拖住，Edge 就会**在真实时间**下存活，过渡正常推进。
+- **`--dump-dom` 拿不到 stdout**：Edge 是 detached 启动的，`> file` 或 `*>&1 | Out-File` 全是 0 字节。
+  → 要拿 DOM/断言结果，**用 HTTP 端点回报**（页面 `fetch(POST)` → Python 落盘），不要指望 stdout。
+- **`--screenshot` 必须给绝对路径**：相对路径会被写到 Edge 自己的工作目录，文件"凭空消失"。
+- 探针里改 `transition:none` 再读 `opacity` 是**污染性测量**：它会把过渡直接"跳"到终态并**永久改变实际值**，
+  之后读到的 1 是假象。只可用于判断"选择器是否匹配"，不可用于判断过渡是否完成。
+
+### 📸 本轮截图
+- `artifacts/screenshots/v2-hero-video-desktop.png`（1440×900）、`artifacts/screenshots/v2-hero-video-mobile.png`（390×844）。
 
 ### ⚠️ 时间码踩坑（写给下一位）
 - 早先那张 `_inspect/winA.png` 的烧入时间码是**相对** `-ss` 起点的，比真实时间**少 4s**（标签 00:00:08 实际是源 00:00:12）。

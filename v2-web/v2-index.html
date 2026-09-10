@@ -129,6 +129,14 @@
     <!-- ============ 首屏 Hero ============ -->
     <section class="hero">
       <div class="hero__bg" aria-hidden="true"></div>
+      <!-- 实拍视频背景：静音循环、铺满首屏，只作氛围底。
+           由 v2-script.js 在可播放时才加 .hero.is-video 淡入；否则保持隐形，
+           自动回落到上面的夜景渐变 —— 失败时不会出现黑屏或报错。 -->
+      <video class="hero__video" autoplay muted loop playsinline preload="auto"
+             poster="assets/hero/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+        <source src="assets/hero/hero-loop.mp4" type="video/mp4" />
+      </video>
+      <div class="hero__veil" aria-hidden="true"></div>
       <!-- 设计感背景：星空 + 层叠山峦（矢量，贴合"山川湖海"主题） -->
       <svg class="hero__stars" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <circle cx="180" cy="140" r="1.4" fill="#fff" opacity="0.6"/>
