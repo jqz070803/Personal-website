@@ -1,5 +1,5 @@
 /* =========================================================
-   v2-script.js — 江沁钊个人主页交互（v2：新增学业板块，交互沿用 v1）
+   v2-script.js — 江沁钊个人主页交互（v2：新增学业板块 + 视差山峦背景，交互沿用 v1）
    ========================================================= */
 
 (function () {
@@ -351,4 +351,72 @@
       }
     }
   }
+})();
+
+/* =========================================================
+   视差背景（v2 追加）
+   首屏之后淡入“太阳 + 分层山峦”背景；滚动时各层位移按 data-px
+   分层推进（远小近大），形成景深。位移被归一化到 0..1 进度内，
+   因此不会随页面无限增长而跑出视口。
+   ========================================================= */
+(function () {
+  "use strict";
+
+  var bg = document.getElementById("bgParallax");
+  if (!bg) return;
+
+  var isShot = /[?&]shot=1/.test(window.location.search);
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var hero = document.querySelector(".hero");
+  var layers = bg.querySelectorAll("[data-px]");
+
+  var start = 0;
+  var span = 1;
+
+  function measure() {
+    // 首屏走完约 3/4 时开始淡入，滚动到 About 屏时已经可见
+    start = (hero ? hero.offsetHeight : window.innerHeight) * 0.75;
+    span = Math.max(
+      document.documentElement.scrollHeight - window.innerHeight - start,
+      1
+    );
+  }
+
+  function update() {
+    var y = window.scrollY;
+
+    if (isShot) {
+      document.body.classList.add("is-parallax-on");
+    } else {
+      document.body.classList.toggle("is-parallax-on", y > start);
+    }
+
+    if (reduce) return;
+
+    var p = Math.min(Math.max((y - start) / span, 0), 1);
+    for (var i = 0; i < layers.length; i++) {
+      var el = layers[i];
+      var d = parseFloat(el.getAttribute("data-px")) || 0;
+      el.style.transform = "translate3d(0," + (-p * d).toFixed(2) + "px,0)";
+    }
+  }
+
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      update();
+      ticking = false;
+    });
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", function () {
+    measure();
+    onScroll();
+  });
+
+  measure();
+  update();
 })();

@@ -92,7 +92,10 @@ b {
 }
 
 .section--tinted {
-  background: var(--paper-soft);
+  /* 半透明分区：让底层“太阳 + 山峦”视差背景透出来，形成景深 */
+  background: rgba(16, 29, 48, 0.62);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
   border-radius: calc(var(--radius) + 8px);
   max-width: calc(var(--maxw) + 0px);
   border: 1px solid var(--line);
@@ -383,9 +386,10 @@ b {
   position: absolute;
   inset: 0;
   z-index: 0;
+  /* 半透明：让底层的太阳与山峦在此屏也透出，保持背景连贯 */
   background:
-    radial-gradient(120% 90% at 50% 10%, rgba(10, 132, 255, 0.16), transparent 60%),
-    linear-gradient(180deg, #071321 0%, #0b1f38 55%, #08141f 100%);
+    radial-gradient(120% 90% at 50% 10%, rgba(10, 132, 255, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(7, 19, 33, 0.94) 0%, rgba(11, 31, 56, 0.58) 55%, rgba(8, 20, 31, 0.32) 100%);
 }
 
 .about-screen__inner {
@@ -1417,5 +1421,105 @@ html.shot .write-char {
   }
   .study-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   视差背景（v2 追加）—— 太阳 + 分层山峦
+   首屏（.hero）之后淡入；随滚动各层位移不同，形成景深。
+   位移量由每层的 data-px 决定（远小近大）。
+   ========================================================= */
+.bg-parallax {
+  position: fixed;
+  inset: 0;
+  z-index: -1;            /* 位于页面内容之下、body 底色之上 */
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+body.is-parallax-on .bg-parallax {
+  opacity: 1;
+}
+
+/* 天幕：深空暮色 + 太阳一侧的暖光晕 + 地平线暖光 */
+.bg-parallax__sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(80% 62% at 78% 12%, rgba(255, 198, 122, 0.16), transparent 60%),
+    radial-gradient(120% 46% at 50% 104%, rgba(255, 172, 82, 0.10), transparent 72%),
+    linear-gradient(180deg, #08131f 0%, #0c2036 48%, #0a1a2c 100%);
+}
+
+/* 太阳：最远，位移最小 */
+.bg-parallax__sun {
+  position: absolute;
+  right: 13%;
+  top: 9%;
+  width: clamp(150px, 16vw, 230px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    #fff7dd 0%,
+    #ffe08a 26%,
+    #ffc247 47%,
+    #ffab2e 60%,
+    rgba(255, 160, 50, 0.26) 71%,
+    rgba(255, 150, 40, 0) 83%
+  );
+  box-shadow: 0 0 90px 26px rgba(255, 172, 62, 0.16);
+  will-change: transform;
+}
+
+/* 山峦层：统一贴底，按层给不同色阶与高度 */
+.bg-parallax__layer {
+  position: absolute;
+  left: -3%;
+  right: -3%;
+  bottom: -6%;
+  line-height: 0;
+  will-change: transform;
+}
+.bg-parallax__layer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bg-parallax__layer--far {
+  height: 54vh;
+  bottom: -5%;
+  color: #24425f;
+  opacity: 0.9;
+  filter: blur(1.4px);      /* 远景空气感：越远越虚，强化景深 */
+}
+.bg-parallax__layer--mid {
+  height: 45vh;
+  bottom: -13%;
+  color: #142c46;
+  filter: blur(0.5px);
+}
+.bg-parallax__layer--near {
+  height: 36vh;
+  bottom: -21%;
+  color: #08182a;
+}
+
+@media (max-width: 760px) {
+  .bg-parallax__sun {
+    right: 9%;
+    top: 8%;
+    width: clamp(120px, 34vw, 180px);
+  }
+  .bg-parallax__layer--far { height: 32vh; }
+  .bg-parallax__layer--mid { height: 27vh; }
+  .bg-parallax__layer--near { height: 22vh; }
+}
+
+/* 无障碍降级：偏好减少动态时，背景静止、不做位移动画 */
+@media (prefers-reduced-motion: reduce) {
+  .bg-parallax [data-px] {
+    transform: none !important;
   }
 }

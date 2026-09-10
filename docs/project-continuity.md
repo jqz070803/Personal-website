@@ -25,14 +25,27 @@
 
 ## 3. 课程阶段（Vibe Coding 大纲，评分项）
 - **V1** = MVP 最小可行产品（★ 已完成）。评分：MVP、Git checkpoint、AI、数字孪生、GitHub、Feedback 等。
-- **V2** = Git / checkpoint（"后悔药"存档）+ 继续完善功能（★ 已完成：新增「学业 · 专业」整页板块 + 导航"学业"入口）。
+- **V2** = Git / checkpoint（"后悔药"存档）+ 继续完善功能（★ 已完成：新增「学业 · 专业」整页板块 + 导航"学业"入口；
+  以及首屏之后淡入的「太阳 + 分层细节山峦」视差背景，并把「学习日常」改写为**劳逸结合**——
+  以上**全部属于文件版本 v2**）。
 - **V3** = Supabase Dashboard + Feedback（接入后端、数据看板、意见反馈）。
+  → 尚未开始；开始时归档为 **`v3-web/`**（见 §4）。
 - **V4** = 数字孪生 / AI 集成（把 AI 能力真正融入页面）。
+
+> ⚠️ **两套编号不要混**：**课程阶段**用 V1～V4（大写 V + 大纲顺序），**文件版本**用 v1/v2/v3…（小写 v + 目录名）。
+> 目前二者一一对应：**课程 V2 的产出 = 文件版本 v2**（「学业」板块与视差背景同属 v2，用户明确要求**不为视觉打磨单独新开版本号**）。
 
 ## 4. 版本命名约定（重要）
 - **所有本版本生成的文件，文件名都以 `v1` 开头**（如 `v1-index.html`、`v1-style.css`、`v1-script.js`、`v1-progress-report.md`）。
 - **下一次迭代（v2 开新对话）时，所有文件改为 `v2` 开头**，依此类推到 v3、v4。
 - 每版都需在 `docs/` 下追加进度记录，并在 `artifacts/screenshots/` 保存截图。
+- **每个版本独立成目录**（`v1-web/`、`v2-web/`、`v3-web/`…），旧版本目录**保留不删**，作为可回退存档。
+- 已占用/已规划的文件版本号：
+  | 文件版本 | 内容 |
+  | :---: | --- |
+  | v1 | MVP 主页 |
+  | v2 | 「学业 · 专业」整页板块 + 视差山峦背景 + 「学习日常」改写（劳逸结合） |
+  | v3（规划） | 课程 V3 的 Supabase Dashboard + Feedback |
 
 ## 5. 当前文件清单
 ### v1（已完成）
@@ -49,50 +62,72 @@ artifacts/
     ├── v1-desktop-full.png   # 桌面端全页截图
     └── v1-mobile-full.png    # 移动端全页截图
 ```
-### v2（已完成：新增「学业 · 专业」整页板块）
+### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景）
 ```
 v2-web/
-├── v2-index.html          # 在"关于"之后新增 #study 学业板块；导航新增"学业"；板块序号顺延(学业02…联系08)
-├── v2-style.css           # 追加 .study-id/.study-grid/.course-list/.daily-list 等样式与响应式；补 html.shot 规则
-├── v2-script.js           # 与 v1 逻辑一致，仅更新版本注释
-└── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
+├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块
+├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；html.shot
+├── v2-script.js           # 沿用 v1 交互，末尾新增独立视差 IIFE（data-px 位移 + is-parallax-on 淡入）
+├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
+└── tools/
+    └── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告
+└── v2-progress-report.md  # v2 迭代进度报告（含追加迭代章节）
 artifacts/
 └── screenshots/
-    ├── v2-study-desktop.png  # 桌面端「学业 · 专业」板块
-    ├── v2-study-mobile.png   # 移动端（375 视口）学业板块
-    └── v2-menu-mobile.png    # 移动端汉堡菜单展开（含"学业"）
+    ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
+    ├── v2-study-mobile.png      # 移动端（375 视口）学业板块
+    ├── v2-menu-mobile.png       # 移动端汉堡菜单展开（含"学业"）
+    ├── v2-parallax-desktop.png  # 桌面端滚过首屏：太阳 + 三层山峦淡入
+    └── v2-parallax-mobile.png   # 移动端 390 视口：山峦 + 太阳，无溢出
 ```
-- v2 板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + 学习日常。
+- 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
+- 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
+- 每层 = 1 个 `<svg>` + **3 条脊线**（远/中/近，颜色依次加深）+ 1 条**日照金边**；三层共 9 条脊线、3 条金边。
+- 山脊算法：**4～6 个宽主峰 + 11～15 个侧坡碎峰 + 8 阶 value noise**，谷底 `floor` 0.22～0.26 抬升 → 层叠山体而非均匀锯齿。
+- 视差：`start = hero 高度 × 0.75`，进度归一化后按 `data-px` 做 `translate3d`，rAF 节流、只改 transform。
+- 可读性：内容卡 `.section--tinted` 改半透明 `rgba(16,29,48,.62)` + `backdrop-filter: blur(10px) saturate(120%)`。
+- 迭代过程见 `docs/v2-progress-report.md` 的「追加迭代」章节（r5→r6→r8→r9 四轮，用户反馈驱动）。
 
 ## 6. 技术栈与运行方式
-- **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v1-index.html` 或起本地 HTTP 服务即可预览。
-- **本地预览命令**：在 `v1-web/` 目录运行 `python -m http.server 8080`，
-  然后访问 `http://127.0.0.1:8080/v1-index.html`。
-- **截图模式**：URL 追加 `?shot=1`（如 `...v1-index.html?shot=1`）可立即显示所有区块并收敛首屏高度，便于截图/打印。
+- **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
+- **本地预览命令**（本项目固定端口 **8123**，在项目根目录执行）：
+  `python -m http.server 8123`，然后访问 `http://127.0.0.1:8123/v2-web/v2-index.html`。
+- **截图模式**：URL 追加 `?shot=1`（如 `...v2-index.html?shot=1`）可立即显示所有区块并收敛首屏高度；
+  该参数还会**强制打开视差背景**（`body.is-parallax-on`），便于静态截图取证。
+- **山峦背景调参**：改 `v2-web/tools/gen-bg-parallax.py` 里的 `LAYERS`（峰数/宽窄/高度/噪声/谷底）与 `PALETTE`（配色），
+  然后 `python v2-web/tools/gen-bg-parallax.py` 重新生成 `v2-index.html` 中的 `#bgParallax` 块（幂等，可反复运行）。
+- **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）。截图用系统 Edge 无头模式
+  （`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
-- **v2**（2026-09-10 完成）：新增「学业 · 专业」整页板块（专业名片 / 核心课程 / 学习日常），
-  导航新增"学业"锚点，原板块序号顺延；桌面 + 移动 + 移动菜单三视图截图验证通过；已 git 存档。
-- **v3（下一步）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
+- **v2**（2026-09-10 完成，同日两轮）：
+  1. 新增「学业 · 专业」整页板块（专业名片 / 核心课程 / 学习日常），导航新增"学业"锚点，原板块序号顺延；
+  2. 追加首屏之后淡入的「太阳 + 分层细节山峦」**视差背景**（3 层 × 3 条脊线 + 日照金边），内容卡改半透明磨砂；
+     移动端与 `prefers-reduced-motion` 降级；山峦由幂等脚本参数化生成；并把「学习日常」改写为**劳逸结合**。
+  桌面 / 移动 / 移动菜单 / 视差多视图截图验证通过；已 git 存档（tag `v2`）。
+- **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
+- **其它待办**：上传真实照片（首屏背景 + 足迹卡片占位图）、接入真实社交媒体链接。
 
 ## 7. 待办 / 下一步
 1. **[高] 上传真实照片**：用户将提供自己拍摄的山川湖海照片。
-   - 替换位置：`v1-web/v1-index.html` 中 `hero__bg` 背景 + `.journey-card__img`（足迹卡片占位图）。
-   - 建议放入 `v1-web/assets/` 或 `v1-web/images/`，并更新 CSS 中标注的 `TODO(v1)`。
-2. 接入真实社交媒体链接（抖音 / B站 / 视频号）替换占位跳转。
-3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（V2 或后续）。
-4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`）。
-   - 建议在关键改动后执行 `git add . && git commit -m "v1: ..."` 打 checkpoint。
-   - 需要我用脚本固定生成可回退的 checkpoint（如按版本打 tag）。
-5. 后续按课程进入 V3：接 Supabase 做 Dashboard 和 Feedback。
+   - 替换位置：`v2-web/v2-index.html` 中 `hero__bg` 背景 + `.journey-card__img`（足迹卡片占位图）。
+   - 建议放入 `v2-web/assets/`（新建），并更新 CSS 中标注的 `TODO(v1)`。
+2. 接入真实社交媒体链接（抖音 / B站 / 视频号，同名「不会飞的jiang」）替换占位跳转。
+3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
+4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
+   - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
+5. 下一版：课程 V3 → 接入 Supabase 做 Dashboard 和 Feedback（文件版本将命名为 `v3-web/`）。
+6. 可选：继续微调山峦（`v2-web/tools/gen-bg-parallax.py` 的 `LAYERS` / `PALETTE`）。
 
 ## 8. 已配置的环境
 - **git**：已通过 winget 安装（2.55.0），仓库已在项目根目录初始化；配置了 user.name / user.email。
-- **本地预览**：已用 Python 启动 `http.server` 于端口 8080（本次会话用）。
+- **本地预览**：用 Python 启动 `http.server` 于端口 **8123**（项目根目录，长期沿用）。
 - **截图工具**：使用系统自带 Microsoft Edge 无头模式（headless）截图，已验证可用。
+- **node**：本机**不可用**（`node --check` 报 CommandNotFoundException），所以不要依赖 npm/构建链。
+- **未纳入版本控制的本地文件**（用户尚未决定是否提交）：`个人主页背景1.mp4`、`网页截图/`、
+  `opencode.jsonc`、`.opencode/`、`outputs/`。临时件统一放 `.deepworks/tmp/`（已被 `.gitignore` 忽略）。
 
 ## 8.5 归档 / commit 规范（★ 用户明确要求，长期遵守）
 - **每次 git 存档（commit）的提交标题，必须用一句简洁语言直接标出本次优化的点**。
@@ -107,7 +142,7 @@ artifacts/
   - 打开前先确认本地静态服务在运行（本项目固定在 `8123` 端口）：
     项目根目录执行 `python -m http.server 8123`；若未运行需先启动。
   - 当前预览地址：`http://127.0.0.1:8123/<版本目录>/<版本>-index.html`
-    （如 v2 为 `http://127.0.0.1:8123/v2-web/v2-index.html`；v3 起替换为对应版本目录）。
+    （当前 v2 为 `http://127.0.0.1:8123/v2-web/v2-index.html`；下一版开始替换为对应版本目录）。
 - 打开后**等待用户看过并给出反馈**，再进入下一步修改；用户确认前不要自行推进大改。
 
 ## 9. 给下一位智能体的提示
@@ -115,3 +150,7 @@ artifacts/
 - 中文编码：PowerShell/命令中处理 UTF-8 中文时，用 `[System.Text.Encoding]::UTF8.GetString($bytes)` 解码，避免乱码误判。
 - 每次迭代务必：**做新功能 → 用内置浏览器打开预览给用户看 → 截图（桌面+移动）→ 更新进度报告 md → git commit 存档**（见 §8.6）。
 - **commit 标题必须是一句简短、能说明本次优化点的中文**（见 §8.5）。
+- **不要提交**未确认的本地文件（见 §8 末尾清单）；`git add` 时逐项写具体路径，避免误提交视频/截图等大文件。
+- **当前预览地址**：`http://127.0.0.1:8123/v2-web/v2-index.html`（v1 路径仅作历史参考）。
+- **改山峦背景**：改 `v2-web/tools/gen-bg-parallax.py` 的 `LAYERS`/`PALETTE` → 跑 `python v2-web/tools/gen-bg-parallax.py`；
+  脚本幂等（先删后插），连续运行输出字节一致。
