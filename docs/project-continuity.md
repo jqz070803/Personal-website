@@ -65,18 +65,19 @@ artifacts/
 ### v2（已完成：「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图）
 ```
 v2-web/
-├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）
-├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；html.shot
-├── v2-script.js           # 沿用 v1 交互，末尾新增三个独立 IIFE：视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
+├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）；01 关于左栏改为 .about-photo__frame 内的 4 张 .about-photo__img 照片墙（舞龙 / 华为门店自拍 / 地铁自拍 / 证件照，滚动时依次交叉渐显）
+├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；.about-photo__frame/__img 绝对堆叠照片墙；.nav::after 毛玻璃底（底边 22px mask 渐隐，消除切断太阳辉光的硬边）；.ms-tile__cap 暗角收紧；#social 桌面底留白 72px；html.shot
+├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
 ├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
 ├── assets/
 │   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
-│   └── hero/              # ★ 首屏视频背景（8.1MB）：hero-loop.mp4（54.8s / 854x480 / H.264 / 无音轨 / faststart）+ hero-poster.jpg
+│   ├── hero/              # ★ 首屏视频背景（8.1MB）：hero-loop.mp4（54.8s / 854x480 / H.264 / 无音轨 / faststart）+ hero-poster.jpg
+│   └── about/             # ★ 01 左栏照片墙（4 张，均预裁 1080×1440 / 3:4，共 0.6MB）：photo-01-dragon / photo-02-selfie-huawei / photo-03-selfie-metro / portrait .jpg
 └── tools/
     ├── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
     └── build-hero-loop.ps1# ★ 首屏视频循环构建器：幂等、可复现（EDL 与交叉时长在文件顶部常量），**不依赖字体/系统目录**
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含四个追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含七个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
@@ -91,7 +92,18 @@ artifacts/
     ├── v2-hero-video-mobile.png # 移动端首屏实拍视频背景（390×844，?shot=1 暂停态）
     ├── v2-hero-live-desktop.png # 桌面端首屏**真实播放中**（真实时间抓图，不是 ?shot=1 暂停态）
     ├── v2-seam-before-desktop.png # 修复前：首屏→第二页接缝有横向台阶（行间跳变 9.49）
-    └── v2-seam-after-desktop.png  # 修复后：同位置台阶消失（0.89）
+    ├── v2-seam-after-desktop.png  # 修复后：同位置台阶消失（0.89）
+    ├── v2-hero-title-offcenter-before.png # 修复前：首屏姓名被拆字空白推偏
+    ├── v2-hero-title-fixed-desktop.png    # 修复后：桌面姓名居中（三个字偏差 0）
+    ├── v2-hero-title-fixed-mobile.png     # 修复后：移动 390 单行居中（偏差 0）
+    ├── v2-about-photo-desktop.png         # 01 左栏照片位：占位图 → 真实证件照
+    ├── v2-about-photo-mobile.png          # 同上，移动 390
+    ├── v2-photowall-01-dragon.png         # 照片墙第 1 张「舞龙」
+    ├── v2-photowall-02-huawei.png         # 第 2 张（门店灯光自拍）渐显中
+    ├── v2-photowall-03-metro.png          # 第 3 张（地铁自拍）渐显中
+    ├── v2-photowall-04-idphoto.png        # 第 4 张证件照：贴顶定格 + caption
+    ├── v2-photowall-mobile-idphoto.png    # 移动 390：第 4 张 + caption
+    └── v2-journey-caption-scrim-after.png # C1：足迹字幕暗角收紧后（10 条字幕均清晰）
 ```
 - 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
 - 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
@@ -102,7 +114,11 @@ artifacts/
 - **足迹拼图**：`.journey-mosaic` 用 `grid-template-columns: repeat(12,1fr)` + `grid-auto-rows: var(--row)` 搭 **12×6 骨架**，10 张 `.ms-tile`（`--m1`～`--m10`，`--lg` 大字 / `--s` 只留标题 / `--big` 移动端通栏）用 `grid-area` **恰好铺满**；入场由 JS 按每张卡片相对中心的向量算出 `--dx/--dy/--sc`（四周涌入）+ 角度排序的 `--d` 错峰延迟（`STEP = 0.10s`），`cubic-bezier(.16,1,.3,1)` **1.6s** 归位；手机端 760px 以下换 6 列骨架（`span 3` / `--big` 为 `span 6`）。
   - 每张卡已接入**真实照片**：媒体元素即 `<img class="ms-tile__media" src="assets/journey/…" alt="…" loading="lazy" decoding="async">`，`object-fit: cover` + 每张独立 `object-position: var(--pos)`（由 `.ms-tile--mN` 承载，兼作加载失败兜底底色）；`::after` 柔光挂在 `.ms-tile` 上，`.ms-tile__cap` 有 `z-index: 2`。
   - 拼图**几何自检**：`.deepworks/tmp/check-mosaic.html` 在 iframe 中按 `?cols/rows` 还原骨架，断言「外框齐边 + 每单元中心命中且仅命中一张 + 尺寸为整数单元 + 逐行带/列带首尾贴合」；1366 / 900 / 390 三视口全部通过（无空洞、无重叠）。
-- 迭代过程见 `docs/v2-progress-report.md` 的**三个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨）。
+- **01 左栏照片墙**：`.about-photo__frame` 内 4 张 `.about-photo__img`（绝对堆叠、`object-fit: cover`），由 `v2-script.js` 第 4 个 IIFE 按**整块 `.about-main` 的滚动行程**（`vh*0.72` → `-h*0.1`）依次交叉渐显、最后定格证件照；`:first-child{opacity:1}` 是禁用 JS 的兜底，`prefers-reduced-motion` 直接定格最后一张。素材由 `.deepworks/tmp/mkimg.ps1` 生成（换图见 §6）。
+- **C1 足迹字幕**：`.ms-tile__cap` 暗角 `0% → 0.5 @44% → 0.9 @100%` + 轻 `text-shadow`（亮部照片压到标题行也读得清）。
+- **C2 导航底边**：毛玻璃底改挂 `.nav::after` + 底边 22px `mask-image` 渐隐，不再把视差太阳辉光横向切断（原 `border-bottom` 发丝线已移除）。
+- **C3 06 社交面板**：桌面 `#social.section{padding-bottom:72px}`，消掉面板下半截的 56px 空档（面板高 555 → 499）。
+- 迭代过程见 `docs/v2-progress-report.md` 的**七个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3）。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
@@ -135,13 +151,33 @@ artifacts/
   （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
   ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 - **⚠️「改了却看不见」→ 先怀疑样式表缓存**：浏览器对 `v2-style.css` 走 HTTP 缓存，而加在**页面 URL 上的 `?v=xxx` 只能刷新 HTML，刷不到 CSS**。
-  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=6`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
-  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=6"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=8`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
+  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=8"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  💡 想确认探针拿到的是**新 JS**，不必非升 `?v`：让新旧算法在小数位上不同（如照片墙 opacity 保留 3 位），看数字指纹即可（`http.server` 带 `Last-Modified`，文件 mtime 变了自然会取新的）。
 - **⚠️「写了却看不见」不都是缓存问题 → 还要查选择器是否真的匹配**：01 关于右栏空白就是 `reveal` 写成了**裸属性**
   （`<div class="about-info" data-stagger reveal>`），`.reveal` 压根匹配不到 → IntersectionObserver 不观察 → `[data-stagger].is-visible > *` 的揭示规则永不生效 → 子项永久 `opacity:0`。
   查法：`.deepworks/tmp/seam.html?probe=1&pys=<滚动位置>&psel=<选择器>`，把 `getComputedStyle` 的 `opacity / transform / classList` POST 回 `hero-report.txt` 看数字，**别靠肉眼**。
 - **中文断行（窄屏）**：长文案在窄屏被按字断行时会出现"`自己`被拆成两行"这类难看断点、或末行孤字。
   修法是插一个**窄屏专用换行** `<br class="hero__br--m" />`（默认 `display:none`，`@media (max-width:560px){ display:inline }`），在**词组边界**断开；桌面端不受影响。
+- **拆字类动画（splitText）先归一空白再拆**：标题在 HTML 里多行书写时，`textContent` 会带上换行 + 缩进；
+  原样逐字包 `span` 会让这些空白变成**含 `&nbsp;` 的实宽 `inline-block`**（不参与空白折叠），一起参与 `text-align:center` → 整行被推偏。
+  统一 `.replace(/\s+/g, " ").trim()` 即可。
+- **滚动驱动的"渐显 / 擦除"类动效**：驱动元素要选**非 sticky** 的那个（sticky 元素停驻期 `rect` 不变 → 进度会冻住）；
+  用「区块在视口里走过的行程」当进度条，且**纯滚动位置函数**（不累积状态）→ 往回滚能原路返回。
+  写 `opacity` 时**始终写数值**：`o === 1 ? "" : o` 这种省略会让它回落到 CSS 的 `:first-child{opacity:1}` 规则 → 出现"该亮的不亮"。
+- **导航毛玻璃底 + 底边渐隐**：毛玻璃底要挂在**伪元素**上（`.nav::after`）才能用 `mask-image` 让底边平滑收尾；
+  挂在本体上时 `border-bottom` 会把背后的太阳辉光**横向切断**成一条硬边（实测 2px 内跳 +22~+33 → 修后 +2.9/+0.7）；`mask` 对 `backdrop-filter` 同样生效。
+- **`.section` 的 `padding: clamp(72px,10vw,128px)` 是"面板发空"的常见来源**：内容只有一行时，下半截全是这段统一留白
+  → 用 `@media (min-width:761px){ #id.section{ padding-bottom:72px } }` 单独收（实测面板 555 → 499、空白 128 → 72）。
+- **探针 `psel` 里含 `#` 必须编码成 `%23`**（否则被当 URL fragment → 选择器残缺 → 抛 `not a valid selector`）；
+  `psel` 走 `querySelectorAll`，**作用于整篇文档、与滚动位置无关** → 可用逗号并列一次取多个板块的元素。
+- **每批 probe 前重启 `probe_server.py`**：它**约 150s 未收到报告就自退**（残留或已退出时不重启会出现 "REPORT MISSING" 假象）；
+  报告要**轮询等**（`Start-Sleep 3` 常常不够）；探针那次运行自带的截图是初始态（y=0），要看画面必须另跑普通截图。
+- **`getBoundingClientRect()` 含 `.reveal` 的 `translateY(28px)`**：元素未揭示时读到的 `top` 比真实值大 28px（别误判成布局错位）。
+- **移动端 1 列 grid 里 `position: sticky` 等于失效**：grid item 的 sticky 行程 = 自己的 grid area 高度 = 自身高度 → 行程 0
+  （桌面 2 列时靠兄弟元素把行撑高才有效）。想让手机端也"钉住"就把 `≤760px` 的容器由 `grid` 改 `block`（用户已确认**保持现状**）。
+- **换 01 照片墙的图**（幂等）：原图 → `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\mkimg.ps1 -Src <原图> -Out v2-web\assets\about\<名>.jpg -W 1080 -H 1440`
+  （3:4、质量 86）→ 覆盖 `v2-web/assets/about/` 里的同名文件 → 同步 `v2-index.html` 里那 4 个 `alt`。**书写顺序 = 渐显顺序，最后一张是停住的画面**。
 
 ## 6.5 版本进展快照
 - **v1**：完成 MVP 主页（响应式 + 智能体预留位 + 多功能块）。
@@ -167,6 +203,13 @@ artifacts/
      ② 首屏标签行新增 **「智能医学工程在读」**（排首位），副标题第二行改为 **「也在大一，把课表上的每一门基础课啃成自己的底气。」**，上方小字改 **「现代徐霞客 · 天津大学（深圳）」**；
      ③ 抖音 / 视频号 占位卡片改为**不可点 + 「筹备中」小圆标**（不再弹原生 alert）；④ 04 镜头直角引号改中文弯引号。
      详见 `docs/v2-progress-report.md` 第五次追加迭代。
+  7. **收尾打磨（第二次）**：① 修掉首屏姓名被拆字空白推偏的**真因**（`splitText()` 先归一空白再拆字，桌面/移动偏差均归零）；
+     ② 01 左栏占位图换成真实证件照，`.about-photo` 补上 `reveal` 类（原来只有 `data-dir="left"`，缺 `.reveal` → 揭示规则永不触发，与第五次同类坑）。详见第六次追加迭代。
+  8. **01 左栏照片墙 + 三项打磨**：① 左栏照片位改为 **4 张照片随滚动依次交叉渐显**（舞龙 → 华为门店自拍 → 地铁自拍 → **证件照收尾**），
+     驱动源是整块 `.about-main` 的滚动行程（桌面/移动实测 opacity 与公式逐点吻合，重叠期不透底）；
+     ② **C1** 足迹字幕暗角收紧（亮部照片上白字也读得清）；③ **C2** 导航毛玻璃底改挂 `.nav::after` + 底边 22px `mask` 渐隐，
+     消掉切断太阳辉光的横向硬边（2px 内 +22~+33 → +2.9/+0.7）；④ **C3** 06 社交面板桌面底留白 128 → 72px（面板高 555 → 499，`docH` 9221 → 9165）。
+     详见第七次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 
@@ -180,7 +223,9 @@ artifacts/
      当前 `brightness(1) saturate(1) contrast(1.1)`；**CSS 侧已到顶**，再亮只能改文字侧或重编视频时烘焙 gamma。
    - **[已完成] 首屏→第二页 接缝修复**：真实时间逐行扫描发现首屏底边行间跳变 **9.49**（= 山峦剪影 `#050D19` 与
      第二页顶色 `#06182D~#062039` 直接相接；**旧版遗留，与视频无关**），已在 `.about-screen__bg::before` 压同色
-     140px 渐隐窄带 → 修复后 **0.89**（桌面/移动均 PASS）。证据 `artifacts/screenshots/v2-seam-{before,after}-desktop.png`。
+      140px 渐隐窄带 → 修复后 **0.89**（桌面/移动均 PASS）。证据 `artifacts/screenshots/v2-seam-{before,after}-desktop.png`。
+   - **[已完成] 01 左栏照片墙**：4 张照片（`v2-web/assets/about/`）随滚动依次交叉渐显、收在证件照上；换图见 §6 的 `mkimg.ps1` 一行命令（**书写顺序 = 渐显顺序**）。
+   - **[已完成] 首屏姓名居中**：`splitText()` 先归一空白再拆字，桌面/移动中心偏差均 **0**（详见第六次追加迭代）。
 2. **社交媒体链接**：B站 已是真实链接；抖音 / 视频号 主页链接待补 → 已按用户要求做成**不可点卡片 + 「筹备中」标注**
    （`div.social-card.social-card--soon`，不再弹 alert）。拿到链接后：把 `div` 换回 `<a href="…">`、去掉 `social-card--soon`、把「筹备中」换回 `→`。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
@@ -188,6 +233,10 @@ artifacts/
    - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
 5. 下一版：课程 V3 → 接入 Supabase 做 Dashboard 和 Feedback（文件版本将命名为 `v3-web/`）。
 6. 可选：继续微调山峦（`v2-web/tools/gen-bg-parallax.py` 的 `LAYERS` / `PALETTE`）。
+7. **about-screen 下沿横向硬边（下一轮修，用户已定）**：文档 y=1800（about-screen 底 vs 视差天幕交界）横贯天空有 **+11.6** 的逐行亮度跳变，
+   **非本轮引入**。做法照首屏→第二页接缝：在交界处压一条同色渐隐窄带，实测目标 **< 1.5**。数值见第七次追加迭代。
+8. **手机端照片墙是否"钉住"**：用户已确认**保持现状**（不钉住，照片随页面上滚）。
+   若要改：把 `≤760px` 的 `.about-main` 由 `grid` 改 `block`，让 `.about-photo` 的 sticky 真正生效（另见 §6 末条）。
 
 ## 8. 已配置的环境
 - **git**：已通过 winget 安装（2.55.0），仓库已在项目根目录初始化；配置了 user.name / user.email。

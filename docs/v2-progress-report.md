@@ -563,3 +563,121 @@ artifacts/
 ### 验证
 - 探针断言（上表）+ 真实时间截图 1440×900 / 480×844 / 390×844（`.deepworks/tmp/r5-*`、`r6-*`、`r7-*`）。
 - 改动同时把 `v2-index.html` 的 `<link>`/`<script>` 版本号 `?v=4` → **`?v=6`**（含 CSS 改动，见 `project-continuity.md` §6）。
+
+## v2 · 追加迭代同日（第六次：首屏姓名被拆字空白推偏 + 01 左栏照片位接入）
+
+### 🀄 首屏姓名不居中（拆字动画的空白未归一）
+
+**用户反馈**：首屏姓名那行（逐字浮入的拆字动画）看起来不是居中的。
+
+**根因**：`splitText()` 把 `el.textContent` **原样**逐字符包 `span`。HTML 里标题是多行书写的，源码中的换行 + 缩进会被 `textContent` 带进来；这些空白被包成**含 `&nbsp;` 的实宽 `inline-block`** 后就**不再参与空白折叠**，于是它们作为真实宽度一起参与 `text-align:center` 的居中计算 → 整行被推偏（严重时挤到第二行）。
+
+**修复**（`v2-script.js` `splitText()` 首行）：
+
+```js
+var text = el.textContent || "";
+// →
+var text = (el.textContent || "").replace(/\s+/g, " ").trim();
+```
+
+统一压成单个空格、再去掉首尾空白。**做拆字类动画时，一律先归一空白再拆。**
+
+**验证**（探针量每个字的中心点与容器中心偏差）：桌面 1440 → 610 / 720 / 830，偏差 **0 / 0 / 0**；移动 390 → 145 / 195 / 245，偏差 **0 / 0 / 0**，两个视口均为**单行**。
+证据 `artifacts/screenshots/v2-hero-title-offcenter-before.png`、`v2-hero-title-fixed-desktop.png`、`v2-hero-title-fixed-mobile.png`。
+
+### 🖼 01 左栏占位图 → 真实证件照
+
+- `.about-photo__frame` 里的占位 SVG 换成真实照片 `<img class="about-photo__img" src="assets/about/portrait.jpg">`；
+- `.about-photo` 同时补上 `reveal` 类（原来只有 `data-dir="left"` —— 而 `[data-dir]` 的揭示规则**要求元素同时带 `.reveal`**，否则永不触发，与第五次那个 `reveal` 裸属性是同一类坑）；
+- 图片按 3:4 预裁 1080×1440，`object-fit: cover` + `object-position: 50% 40%` 仅作换图时的兜底裁切重心。
+
+证据 `artifacts/screenshots/v2-about-photo-desktop.png` / `-mobile.png`。本轮含 CSS/JS 改动 → 版本号 `?v=6` → **`?v=7`**。
+
+## v2 · 追加迭代同日（第七次：01 左栏照片墙 4 张滚动渐显 + C1/C2/C3 打磨）
+
+### 🎯 需求（用户）
+
+把 01「关于」左栏那个照片位做成**照片墙**：滚轮下滑时**依次渐显**切换 4 张照片，**最后停在证件照**上（用户明确：**证件照不要放第一张**）。
+
+### 🧱 素材
+
+- 用户本轮新放三张原图在项目根（`微信图片_20260910235441_86_58.jpg` / `…_235442_87_58.jpg` / `…_235443_88_58.jpg`，**不入库**）；
+- 用 `.deepworks/tmp/mkimg.ps1`（读 EXIF `0x0112`、`HighQualityBicubic`、质量 86）统一裁成 **1080×1440（3:4）** 存到 `v2-web/assets/about/`：
+  `photo-01-dragon.jpg`（舞龙）/ `photo-02-selfie-huawei.jpg`（门店灯光自拍）/ `photo-03-selfie-metro.jpg`（地铁自拍）/ `portrait.jpg`（证件照）。
+
+### ⚙️ 实现
+
+- **CSS**：`.about-photo__frame` 加 `position: relative`；`.about-photo__img` 改**绝对定位满铺**（`object-fit: cover`、`opacity: 0`、`will-change: opacity`）；
+  `.about-photo__img:first-child { opacity: 1 }` 作为**禁用 JS / 脚本报错时的兜底画面**。
+- **JS**（`v2-script.js` 末尾新增第 4 个 IIFE）：以**整块 `.about-main`** 在视口里走过的行程当进度条
+  —— **不能用 `.about-photo`**：它是 `position: sticky`，停驻期间 `rect` 不再变化，进度会冻住。
+  `from = vh * 0.72` 记 0（照片刚露头、`reveal` 也已触发）→ `to = -rect.height * 0.1` 记 1（区块再往上走 0.1 个自身高度）。
+  4 张各占 `SEG = 1/4`，重叠宽 `fade = SEG * 0.55`，第 i 张 `opacity = min(in, out)`；
+  rAF 节流 + `{ passive: true }` + `resize` 重算；**纯滚动位置函数 → 往回滚能原路返回**，不会出现单向状态。
+  `prefers-reduced-motion: reduce` → **不挂监听，直接定格在最后一张（证件照）**。
+  ⚠️ **必须始终写数值** `String(Math.round(o * 1000) / 1000)`：曾写成 `o === 1 ? "" : o`，空字符串会让 `opacity` 回落到 CSS 的
+  `:first-child { opacity: 1 }`（对 i ≥ 1 的图即 0）→ 出现"该亮的不亮"。
+
+### ✅ 验证（数值 + 实拍双证）
+
+桌面 1440×900（`.about-main` absTop 2138 / h 850 / vh 900 → `t = (scrollY - 1490) / 733`）：
+
+| scrollY | t | 4 张 opacity（书写顺序） | 实拍 |
+| --: | --: | :-- | :-- |
+| 1500 | 0.014 | 1 / 0 / 0 / 0 | 舞龙 ✓ |
+| 1700 | 0.286 | 0.739 / 1 / 0 / 0 | — |
+| 1950 | 0.628 | 0 / 0.076 / 1 / 0.105 | 地铁自拍 ✓ |
+| 2100 | 0.832 | 0 / 0 / 0.406 / 1 | 照片贴顶定格（top 96） |
+| 2250 | 1.000 | 0 / 0 / 0 / 1 | 证件照 + caption ✓ |
+| 2600 | 1.000 | 0 / 0 / 0 / 1 | 照片已随区块离场 |
+
+实测值与公式预测**逐点吻合到小数点后三位**；相邻两张重叠期 opacity 之和 ≥ 1 → **无背景透底**。
+移动 390×844（`.about-main` absTop 1927 / h 1439）：1400 → `1/0/0/0`（此时 `reveal` 尚未触发）→ 1600 → `0.179/1/0.002/0` → 1800 → `0/0/1/0.196` → 2000 / 2200 → `0/0/0/1`，序列单调、最后定格证件照。
+实拍 `artifacts/screenshots/v2-photowall-{01-dragon,02-huawei,03-metro,04-idphoto}.png`、`v2-photowall-mobile-idphoto.png`。
+
+- 照片落位无回归：桌面 `l=204 / w=451 / cx=430`（与容器中心一致）；移动 `l=35 / w=320 / cx=195`。
+- **移动端照片不"钉住"**：≤760px 时 `.about-main` 是**单列 grid**，`.about-photo` 的 sticky 行程 = 自身高度 → 行程 0，照片随页面上滚。
+  用户已确认**保持现状**（第 4 张证件照出现在照片快滚出上沿时，可接受）。
+
+### ✨ C1：足迹字幕可读性
+
+`.ms-tile__cap` 的暗角由 `0% → 0.74 @78%` 改为 **`0% → 0.5 @44% → 0.9 @100%`**，并加一层很轻的 `text-shadow`：
+亮部照片（湖面 / 海面 / 草原天空）压到标题行时白字仍清晰，同时不再整块发黑。实拍 `artifacts/screenshots/v2-journey-caption-scrim-after.png`。
+
+### ✨ C2：导航底边把太阳辉光切断（硬边）
+
+**真因**：`.bg-parallax__sun` 的 `box-shadow` 辉光向上溢到导航高度，而 `.nav--scrolled` 把毛玻璃底**画在 `.nav` 本体**上，
+底边的 `border-bottom` 就在辉光中间切出一条横向硬边（视差背景淡入后整页常驻）。
+
+**修复**：毛玻璃底挪到 **`.nav::after`**（`z-index: -1`、`opacity` 过渡），并给底边做 **22px 渐隐**的 `mask-image`
+（`#000 66% → 透明 100%`；mask 同时作用于 `backdrop-filter`，连模糊都是平滑收尾）；**同时移除**原来的 `border-bottom` 发丝线。
+
+**实测**（真实时间截图逐行平均亮度，x = 1050–1220）：导航底边处 **+22 ~ +33（2px 内） → +2.9 / +0.7**，全段最大 |Δ| = 5.1 且位于日轮自身渐变内部。
+
+⚠️ 副作用（须知悉）：**导航栏下面那条 1px 发丝线没有了** —— 这是消除硬边的必要代价（用户已确认）。
+
+### ✨ C3：06 社交面板下方 128px 空档
+
+**真因**：`.section { padding: clamp(72px, 10vw, 128px) 24px }` —— 1440 下上下各 128px；06 社交只有一行卡片，
+内容止于 ≈425，面板下半截就是这段统一留白本身（不是布局错位）。
+
+**修复**：`@media (min-width: 761px) { #social.section { padding-bottom: 72px } }`（窄屏本来就是 72px）。
+
+**实测**：`#social` 面板高 **555 → 499**；卡片底到面板底 **128 → 72**；`docH 9221 → 9165`（正好 −56）；
+**移动端 docH 10762 不变** → 确认该覆盖只作用于桌面。
+
+### 🔎 顺手量出一条非本轮引入的硬边（已记入待办）
+
+`y=1550` 截图视口 y ≈ 250 处（= 文档 y=1800，**about-screen 下沿 vs 视差天幕交界**）存在 **+11.6 的逐行亮度跳变**，横贯整个天空宽度。
+非本轮引入（本轮未碰背景），但既然量到了就记录：**用户已定"下一轮修"**（照首屏→第二页接缝的做法压同色渐隐带，实测降到 1.5 以下为止）。
+之前几轮没发现的原因：都在 y=1800 取样，那时这条线正好落在视口 y=0、被导航挡住。
+
+### 🧰 本轮工具坑（已写进 `project-continuity.md` §6）
+
+1. **探针 `psel` 里含 `#` 必须 URL 编码成 `%23`**：浏览器把 `#` 之后当 URL fragment，`#social.section` 进到探针只剩 `section`，直接抛 `Failed to execute 'querySelectorAll' … '.ms-tile__cap,' is not a valid selector.`。
+2. **每批 probe 前必须重启 8125 的 `probe_server.py`**：它**约 150s 未收到报告就自退**，上一批残留 / 已自退时下一批会出现 "REPORT MISSING" 假象。
+3. **报告要轮询等**（3s 常常不够）：`for ($i = 0; $i -lt 25; $i++) { if (Test-Path …) { break }; Start-Sleep 3 }`。
+4. **探针那次运行自带的截图是初始态（y=0）**，对观感没有价值 → 要看画面必须另跑一次普通截图。
+5. **`getBoundingClientRect()` 含 `.reveal` 的 `translateY(28px)`**：未揭示时读到的 `top` 比真实值大 28px（移动端 1955 vs 1927 就是这么来的）。
+
+本轮含 CSS/JS 改动 → 版本号 `?v=7` → **`?v=8`**（三处：`v2-style.css` / `v2-about-data.js` / `v2-script.js`）。

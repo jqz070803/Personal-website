@@ -6,7 +6,7 @@
   <meta name="description" content="江沁钊的个人主页 —— 一个行走于山川湖海之间的观察者，用镜头记录每一帧美好。" />
   <title>江沁钊 · 行走于山川湖海的观察者</title>
   <!-- 版本号 ?v= 用于强制浏览器取新样式：改动 CSS 后请同步+1（避免旧样式被缓存导致"改了看不见"） -->
-  <link rel="stylesheet" href="v2-style.css?v=6" />
+  <link rel="stylesheet" href="v2-style.css?v=8" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -229,15 +229,19 @@
       </div>
 
       <div class="about-main reveal">
-        <!-- 左：个人照片（占位，待替换为真实照片） -->
-        <div class="about-photo" data-dir="left">
+        <!-- 左：个人照片墙 —— 4 张按 3:4 预裁好的 1080x1440 照片（见 assets/about/），
+             滚动到 01 区块的行程里会依次交叉渐显；书写顺序＝渐显顺序，最后一张收在证件照上。
+             源图由 .deepworks/tmp/mkimg.ps1 生成，改图请一并更新这里的 alt。 -->
+        <div class="about-photo reveal" data-dir="left">
           <div class="about-photo__frame">
-            <div class="about-photo__img ph" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="8.4" r="3.4"/>
-                <path d="M5.5 19.5a6.5 6.5 0 0 1 13 0"/>
-              </svg>
-            </div>
+            <img class="about-photo__img" src="assets/about/photo-01-dragon.jpg"
+                 alt="夜色里举着龙灯走过灯火通明的街" width="1080" height="1440" loading="lazy" decoding="async" />
+            <img class="about-photo__img" src="assets/about/photo-02-selfie-huawei.jpg"
+                 alt="门店灯光下的自拍" width="1080" height="1440" loading="lazy" decoding="async" />
+            <img class="about-photo__img" src="assets/about/photo-03-selfie-metro.jpg"
+                 alt="车站里的自拍，肩上挂着耳机" width="1080" height="1440" loading="lazy" decoding="async" />
+            <img class="about-photo__img" src="assets/about/portrait.jpg"
+                 alt="江沁钊的证件照" width="1080" height="1440" loading="lazy" decoding="async" />
           </div>
           <p class="about-photo__cap">江沁钊 · 行走于山川湖海</p>
         </div>
@@ -665,7 +669,7 @@
     </p>
   </footer>
 
-  <script src="v2-about-data.js?v=6"></script>
-  <script src="v2-script.js?v=6"></script>
+  <script src="v2-about-data.js?v=8"></script>
+  <script src="v2-script.js?v=8"></script>
 </body>
 </html>

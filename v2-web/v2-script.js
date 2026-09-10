@@ -146,7 +146,12 @@
 
   function splitText(el) {
     // 取文本（含空格），逐字符包一层 span，空白保留原样
-    var text = el.textContent || "";
+    // 取文本（先归一空白再拆字）：
+    // HTML 里多行书写的标题会带上换行 + 缩进空格，若原样拆成 span，
+    // 每个空白会变成一个含 &nbsp; 的实宽 inline-block（不参与空白折叠），
+    // 被 text-align:center 一起居中 -> 整行文字被推偏、甚至挤到第二行。
+    // 这里统一压成单个空格并去掉首尾空白。
+    var text = (el.textContent || "").replace(/\s+/g, " ").trim();
     var frag = document.createDocumentFragment();
     for (var i = 0; i < text.length; i++) {
       var ch = text[i];
@@ -603,4 +608,71 @@
       });
     }
   });
+})();
+
+/* =========================================================
+   01 关于 · 左栏照片墙：随滚动依次交叉渐显
+   四张照片按书写顺序叠放，用「关于我」整块在视口里走过的行程当进度条：
+   滚下去时前一张淡出、后一张淡入（后写的在上层，所以视觉上是一次干净的溶解），
+   停在最后一张证件照上。进度只由滚动位置决定 → 往回滚能原路返回，
+   不会出现"一动就回不去"的单向状态；减少动效时直接定格在最后一张。
+   CSS 里第一张默认 opacity:1，脚本没跑（或报错）时也不会开天窗。
+   ========================================================= */
+(function () {
+  var frame = document.querySelector(".about-photo__frame");
+  var block = document.querySelector(".about-main");
+  if (!frame || !block) return;
+
+  var imgs = frame.querySelectorAll(".about-photo__img");
+  var n = imgs.length;
+  if (n < 2) return;
+
+  var SEG = 1 / n;      /* 每张照片独占的行程比例 */
+  var OVERLAP = 0.55;   /* 交叉渐显的重叠宽度（按 SEG 计）：越大越柔和 */
+  var fade = SEG * OVERLAP;
+  var ticking = false;
+
+  function clamp01(v) {
+    return v < 0 ? 0 : v > 1 ? 1 : v;
+  }
+
+  /* 进度 t：区块上沿刚到视口 72% 处（照片才露头、reveal 也已触发）记 0，
+     区块再往上走 0.1 个自身高度记 1——那时照片正好停在贴顶位置，四张刚好走完，
+     最后一张证件照便成了"栏目停住时"的画面。桌面左右排布、手机上下排布都成立。 */
+  function progress(rect, vh) {
+    var from = vh * 0.72;
+    var to = -rect.height * 0.1;
+    var span = from - to;
+    return span > 0 ? clamp01((from - rect.top) / span) : 0;
+  }
+
+  function paint() {
+    ticking = false;
+    var vh = window.innerHeight;
+    var t = progress(block.getBoundingClientRect(), vh);
+
+    for (var i = 0; i < n; i++) {
+      var start = i * SEG;
+      var inA = clamp01((t - start + fade) / fade);
+      var outA = clamp01((start + SEG + fade - t) / fade);
+      imgs[i].style.opacity = String(Math.round(Math.min(inA, outA) * 1000) / 1000);
+    }
+  }
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(paint);
+  }
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    /* 减少动效：不做随滚动的渐显，定格在最后一张（证件照） */
+    for (var i = 0; i < n - 1; i++) imgs[i].style.opacity = "0";
+    imgs[n - 1].style.opacity = "1";
+    return;
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  paint();
 })();

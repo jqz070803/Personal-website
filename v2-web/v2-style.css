@@ -115,14 +115,27 @@ b {
   align-items: center;
   justify-content: center;
   padding: 0 24px;
-  transition: background 0.35s ease, box-shadow 0.35s ease, backdrop-filter 0.35s ease;
 }
 
-.nav--scrolled {
+/* 滚动后的毛玻璃底放在 ::after 上（而不是 .nav 本体），这样才能给底边做 22px 渐隐：
+   否则导航底边会把背后的太阳辉光横向"切"出一道硬边（视差背景淡入后整页都在）。
+   mask 会同时作用于 backdrop-filter，所以连模糊也是平滑收尾的；
+   手机端 .nav__menu 是 .nav 的 fixed 子元素，不受这个伪元素影响。 */
+.nav::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.35s ease;
   background: rgba(10, 20, 36, 0.72);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 66%, rgba(0, 0, 0, 0) 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 66%, rgba(0, 0, 0, 0) 100%);
+}
+.nav--scrolled::after {
+  opacity: 1;
 }
 
 .nav__menu {
@@ -685,25 +698,30 @@ html.shot .word-pen {
   top: 96px;
 }
 .about-photo__frame {
+  position: relative;
   aspect-ratio: 3 / 4;
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 24px 60px -24px rgba(11, 31, 56, 0.35);
 }
+/* 左栏照片墙：4 张源图都已预裁为 3:4（1080x1440），与 __frame 的 aspect-ratio 完全一致，
+   cover 不会二次裁切；object-position 只作为兜底（换图比例不匹配时偏向头部）。
+   默认只显示第一张（= 禁用 JS 时的兜底画面），其余由 JS 按滚动进度交叉渐显。 */
 .about-photo__img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(10, 132, 255, 0.25), transparent 60%),
-    linear-gradient(180deg, #0d2136 0%, #081627 100%);
-  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  object-fit: cover;
+  object-position: 50% 40%;
+  background: #0d2136;
+  opacity: 0;
+  will-change: opacity;
 }
-.about-photo__img svg {
-  width: 30%;
-  max-width: 130px;
-  height: auto;
+.about-photo__img:first-child {
+  opacity: 1;
 }
 .about-photo__cap {
   margin-top: 16px;
@@ -969,8 +987,11 @@ html.shot .word-pen {
   bottom: 0;
   padding: 34px 12px 11px;
   text-align: center;
-  background: linear-gradient(180deg, rgba(6, 16, 30, 0) 0%, rgba(6, 16, 30, 0.74) 78%);
+  /* 收紧暗角：照片亮部（湖面 / 海面 / 草原天空）常压到标题行，顶部太透会读不清；
+     同时给文字一层很轻的暗影兜底，保证白字在亮底上也有足够对比度。 */
+  background: linear-gradient(180deg, rgba(6, 16, 30, 0) 0%, rgba(6, 16, 30, 0.5) 44%, rgba(6, 16, 30, 0.9) 100%);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(2, 8, 16, 0.5), 0 2px 12px rgba(2, 8, 16, 0.45);
   pointer-events: none;
   z-index: 2;
 }
@@ -1177,6 +1198,14 @@ html.shot .word-pen {
   border-radius: 999px;
   padding: 3px 10px;
   white-space: nowrap;
+}
+/* 06 社交只有一行卡片，若沿用统一的 128px 底留白，面板下半截会明显发空。
+   桌面端把底留白收到 72px（= .section 在窄屏下的最小值），让面板贴住内容；
+   窄屏本来就是 72px，不必覆盖。 */
+@media (min-width: 761px) {
+  #social.section {
+    padding-bottom: 72px;
+  }
 }
 
 /* =========================================================
