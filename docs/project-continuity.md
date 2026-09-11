@@ -66,18 +66,19 @@ artifacts/
 ```
 v2-web/
 ├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）；01 关于左栏改为 .about-photo__frame 内的 4 张 .about-photo__img 照片墙（舞龙 / 华为门店自拍 / 地铁自拍 / 证件照，滚动时依次交叉渐显）
-├── v2-style.css           # 学业板块样式 + 响应式；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；.about-photo__frame/__img 绝对堆叠照片墙；.nav::after 毛玻璃底（底边 22px mask 渐隐，消除切断太阳辉光的硬边）；.ms-tile__cap 暗角收紧；#social 桌面底留白 72px；html.shot
-├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（**进入视野才开演**：元素顶边越过视口 80% 触发，四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
-├── v2-about-data.js       # "About me" 手写 SVG 笔画数据（沿用 v1）
+├── v2-style.css           # 学业板块样式 + 响应式；第二页手写单词 `.about-screen__word` / `.word-svg` / `.word-ghost-text` / `.word-ink-text` / `.word-brush` / `.word-pen`（`@font-face` 内置 Pacifico + 双层 `<text>` + 圆头遮罩推进 + 纸飞机笔尖）；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；.about-photo__frame/__img 绝对堆叠照片墙；.nav::after 毛玻璃底（底边 22px mask 渐隐，消除切断太阳辉光的硬边）；.ms-tile__cap 暗角收紧；#social 桌面底留白 72px；html.shot
+├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏；第二页手写单词由独立 IIFE 驱动：**内置 Pacifico 字体字形 + 彩虹渐变 + 圆头遮罩推进**，按单词顶边越过视口 60% 才开演，`?shot=1`/reduced-motion 定格）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（**进入视野才开演**：元素顶边越过视口 80% 触发，四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
+├── v2-about-data.js       # ⚠ **已不再被引用**（第九次迭代改用真字体字形，`<script>` 标签已移除，文件留盘备查）："About me" 手写 SVG 笔画数据（网格化描摹路径，是"弯曲处有棱角"的根源，己弃用）
 ├── assets/
 │   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
 │   ├── hero/              # ★ 首屏视频背景（8.1MB）：hero-loop.mp4（54.8s / 854x480 / H.264 / 无音轨 / faststart）+ hero-poster.jpg
-│   └── about/             # ★ 01 左栏照片墙（4 张，均预裁 1080×1440 / 3:4，共 0.6MB）：photo-01-dragon / photo-02-selfie-huawei / photo-03-selfie-metro / portrait .jpg
+│   ├── about/             # ★ 01 左栏照片墙（4 张，均预裁 1080×1440 / 3:4，共 0.6MB）：photo-01-dragon / photo-02-selfie-huawei / photo-03-selfie-metro / portrait .jpg
+│   └── fonts/             # ★ 第二页手写单词的花体字体（第九次迭代引入，**必须入库**）：pacifico-latin.woff2（32KB，Google Fonts latin 子集）+ Pacifico-OFL.txt（SIL OFL 1.1 许可原文，随字体一起保留）
 └── tools/
     ├── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
     └── build-hero-loop.ps1# ★ 首屏视频循环构建器：幂等、可复现（EDL 与交叉时长在文件顶部常量），**不依赖字体/系统目录**
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含八个追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含九个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
@@ -105,7 +106,10 @@ artifacts/
     ├── v2-photowall-03-metro.png          # 第 3 张（地铁自拍）渐显中
     ├── v2-photowall-04-idphoto.png        # 第 4 张证件照：贴顶定格 + caption
     ├── v2-photowall-mobile-idphoto.png    # 移动 390：第 4 张 + caption
-    └── v2-journey-caption-scrim-after.png # C1：足迹字幕暗角收紧后（10 条字幕均清晰）
+    ├── v2-journey-caption-scrim-after.png # C1：足迹字幕暗角收紧后（10 条字幕均清晰）
+    ├── v2-about-word-writing.png  # ★ 第二页手写单词「书写中」：'abou' 已上彩虹、't' 只填了左上角、'me' 仍是幽灵层，纸飞机笔尖在 'ou' 附近
+    ├── v2-about-word-rest.png     # 同一位置「定格」：整词彩虹、无半透明残留、纸飞机已淡出
+    └── v2-about-word-mobile.png   # 移动端 390：字宽 335/390，整词写出
 ```
 - 学业板块内容：专业名片（**天津大学（深圳） · 智能医学工程 · 大一**）+ 核心课程标签墙 + **学习日常（劳逸结合：周中教室/自习室，周末探索世界）**。
 - 背景构成：深空暮色天幕（含太阳侧暖光晕）→ 太阳（`data-px=16`，最远）→ far/mid/near 三层山峦（`data-px=48/88/152`）。
@@ -120,7 +124,11 @@ artifacts/
 - **C1 足迹字幕**：`.ms-tile__cap` 暗角 `0% → 0.5 @44% → 0.9 @100%` + 轻 `text-shadow`（亮部照片压到标题行也读得清）。
 - **C2 导航底边**：毛玻璃底改挂 `.nav::after` + 底边 22px `mask-image` 渐隐，不再把视差太阳辉光横向切断（原 `border-bottom` 发丝线已移除）。
 - **C3 06 社交面板**：桌面 `#social.section{padding-bottom:72px}`，消掉面板下半截的 56px 空档（面板高 555 → 499）。
-- 迭代过程见 `docs/v2-progress-report.md` 的**八个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3；足迹拼图触发时机修复）。
+- 迭代过程见 `docs/v2-progress-report.md` 的**九个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3；足迹拼图触发时机修复；第二页手写单词改真字体字形 + 彩虹遮罩写出）。
+- **第二页手写单词（第九次迭代起）**：`v2-index.html` 的 `#aboutScreenWord` 内 = 幽灵层 `#wordGhostText` + 彩虹层 `#wordInkText`（`fill="url(#wordRainbow)"`、`mask="url(#wordBrushMask)"`）+ 遮罩路径 `#wordBrush` + 纸飞机 `#wordPen`；
+  字体 `@font-face "Pacifico"`（`assets/fonts/pacifico-latin.woff2`），字号由 JS 按画布宽自适应（内联 `style.fontSize`，**不可用呈现属性**），渐变 `x1/x2` 按实测字宽写死。
+  单词实体几何（桌面 1440×900）：`#aboutScreenWord` 屏幕位 `x340 w760 h198`、文档 absTop **1276** → 开演 scrollY ≈ **736**；墨迹实测 **699×179**、`x 373..1072`、`y 477..656`。
+  ⚠️ 已知取舍：字体轮廓是并集整体，参考图那种"笔画交叠半透明"无法复现（详见第九次追加迭代）。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
@@ -153,8 +161,8 @@ artifacts/
   （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
   ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 - **⚠️「改了却看不见」→ 先怀疑样式表缓存**：浏览器对 `v2-style.css` 走 HTTP 缓存，而加在**页面 URL 上的 `?v=xxx` 只能刷新 HTML，刷不到 CSS**。
-  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=9`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
-  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=9"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=10`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
+  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=10"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
   💡 想确认探针拿到的是**新 JS**，不必非升 `?v`：让新旧算法在小数位上不同（如照片墙 opacity 保留 3 位），看数字指纹即可（`http.server` 带 `Last-Modified`，文件 mtime 变了自然会取新的）。
 - **⚠️「写了却看不见」不都是缓存问题 → 还要查选择器是否真的匹配**：01 关于右栏空白就是 `reveal` 写成了**裸属性**
   （`<div class="about-info" data-stagger reveal>`），`.reveal` 压根匹配不到 → IntersectionObserver 不观察 → `[data-stagger].is-visible > *` 的揭示规则永不生效 → 子项永久 `opacity:0`。
@@ -191,6 +199,24 @@ artifacts/
 - **`getBoundingClientRect()` 含 `.reveal` 的 `translateY(28px)`**：元素未揭示时读到的 `top` 比真实值大 28px（别误判成布局错位）。
 - **移动端 1 列 grid 里 `position: sticky` 等于失效**：grid item 的 sticky 行程 = 自己的 grid area 高度 = 自身高度 → 行程 0
   （桌面 2 列时靠兄弟元素把行撑高才有效）。想让手机端也"钉住"就把 `≤760px` 的容器由 `grid` 改 `block`（用户已确认**保持现状**）。
+- **"手写感 + 边缘平滑"不要靠坐标描摹**：拿网格化坐标写 SVG 路径去描一整个单词，曲线**段间切线不连续** →
+  放大后必然是一串多边形折角（v2 第二页"弯曲处有棱角"的真因，加大字号只会更糟）。正解是**用花体字体渲染字形**
+  （边缘由字形轮廓决定，天然平滑）+ 遮罩推进制造"写出"过程。字体要能随项目分发就用 **SIL OFL**（本项目 Pacifico，
+  `v2-web/assets/fonts/pacifico-latin.woff2` 32KB + `Pacifico-OFL.txt` 许可原文同放）；`@font-face` 加 `font-display: block`，
+  并**等 `document.fonts.load('400 150px "Pacifico"')` 就绪后再量尺寸**（否则量到后备字体，整块缩放全错）。
+- **SVG 呈现属性会被 CSS 类规则覆盖**：`el.setAttribute("font-size", 250)` 干不过 `.word-ink-text{font-size:150px}` →
+  缩放**静默失效**（探针实测字宽 424px，应约 706px）。**凡是要动态改尺寸，一律写内联 `el.style.fontSize`**；
+  这类"改了没生效"要量**元素实测宽度**，别靠肉眼。
+- **`getBBox()` 对 `<text>` 返回的是字体 em 盒，不是墨迹范围**（Pacifico ≈ 1.76em 高 = 334px，而墨迹只有 179px）→
+  **纵向几何不能由 box 推导**（笔刷会被拉到字外），改用画布中线 + 固定粗细（本项目 `stroke-width: 260`，略大于画布高）；
+  而"盒中心对齐画布中心"仍可用（实测墨迹中心 566 vs 容器中心 575）。
+- **`maskUnits="userSpaceOnUse"` 的矩形会真的裁掉字形**：遮罩区要给足余量（本次从 `y 0..260` 放宽到 `y=-200 h=660`），
+  否则 em 盒偏大的字被切边且**看不出原因**。
+- **`probe_server.py` 收到 `/report` 就自杀**（`main()` 等 `OUT.exists()`）→ **探针批次与其后的抓图绝不能共用同一次服务会话**：
+  后续抓图的 `/slow` 立即失败 → 外壳页 `load` 提前 → 截图停在**页顶**，现象极像"滚动没生效"。**每张（批）抓图前重启 8125**。
+- **"截图到底停在哪个板块"用颜色锚点判，别靠肉眼**：第二页彩虹单词左端是**绿色**，而首屏没有绿色 →
+  数"绿通道显著大于红/蓝"的像素即可判定（本次靠它发现两张图其实停在页顶：绿像素 0 → 重启后 22,845 / 42,868）。
+  逐像素统计直接用 PowerShell `System.Drawing`（本机无 PIL）。⚠️ 首屏的蓝色按钮/高亮文字也会被"彩色"判据命中，**要限定 x 范围避开**。
 - **换 01 照片墙的图**（幂等）：原图 → `powershell -ExecutionPolicy Bypass -File .deepworks\tmp\mkimg.ps1 -Src <原图> -Out v2-web\assets\about\<名>.jpg -W 1080 -H 1440`
   （3:4、质量 86）→ 覆盖 `v2-web/assets/about/` 里的同名文件 → 同步 `v2-index.html` 里那 4 个 `alt`。**书写顺序 = 渐显顺序，最后一张是停住的画面**。
 
@@ -230,6 +256,11 @@ artifacts/
       改为**元素顶边越过视口 80% 才开演**（`rect.top < vh * 0.8`）+ `scroll`/`resize`/`load` 触发 + `started` 守卫 + 开演摘监听。
       实测：y=0 停留 7s 仍 `is-armed`（**无** `is-in`）→ y=4200（top=672 < 720）才 `is-in` → y=4700 已 `is-done`。
       实拍 `artifacts/screenshots/v2-journey-flyin-late.png`（飞入中）/ `v2-journey-flyin-done.png`（归位后）。详见第八次追加迭代。
+   10. **第二页手写单词改为"真字体字形 + 彩虹渐变 + 遮罩推进"**：`v2-about-data.js` 网格化**描摹路径的段间接线不连续**就是"弯曲处有棱角"的真因 →
+       改用内置 **Pacifico**（SIL OFL）渲染字形（边缘天然平滑），`linearGradient` 按实测字宽铺满七档彩虹，
+       圆头粗描边作 `<mask>` 从左向右"写出"，纸飞机笔尖 `getPointAtLength` 跟随、收笔淡出；触发按**单词顶边越过视口 60%**（absTop 1276 → ≈scrollY 736）。
+       实测：字宽 424 → **706px**（修掉"`font-size` 呈现属性被 CSS 覆盖"这个真 bug）、墨迹 **699×179**、纵向中心偏差 9px、定格帧笔尖 `op=0`、移动端字宽 335/390。
+       实拍 `v2-about-word-writing.png`（书写中）/ `v2-about-word-rest.png`（定格）/ `v2-about-word-mobile.png`（移动）。详见第九次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 

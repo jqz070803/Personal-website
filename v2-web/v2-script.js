@@ -242,109 +242,129 @@
     }
   }
 
-  /* ---------- About 简介屏：单笔连笔手写 "About me" ----------
-     SVG 幽灵淡线整词显示，墨迹按笔顺用 stroke-dashoffset 逐笔写出，
-     笔尖用 getPointAtLength 跟随当前书写点（正序写完）。
-     数据来自 v1-about-data.js (window.ABOUT_STROKES)，含 9 个连续笔画。
-     截图 / 减少动效：直接显示完整墨迹。 */
-  var aboutStrokes = window.ABOUT_STROKES;
-  if (aboutStrokes && aboutStrokes.strokeD && aboutStrokes.strokeD.length) {
-    var inkEl = document.getElementById("wordInk");
+  /* ---------- About 简介屏：手写单词"about me"（真字体字形 + 遮罩推进写出）----------
+     旧实现是"描摹一条低精度折线路径"，曲线相接处切线不连续，放大后可见明显棱角。
+     现在改为：单词交给内置花体字体（Pacifico · SIL OFL）渲染，视觉边缘完全由字形
+     轮廓决定；再用一条圆头粗描边路径作遮罩、从左向右推进 —— 被扫过的字形即"被写出"。
+     墨迹填充为沿横向铺满的彩虹渐变（绿→黄→橙→粉→紫→蓝，参考 Apple hello 配色）。
+     截图 / 减少动效：直接完整显示 + 隐藏笔尖。
+     触发判据与 03 足迹拼图同源：单词顶边越过视口 60% 才开演（不早播、不重播）。 */
+  (function () {
+    var inkText = document.getElementById("wordInkText");
+    var ghostText = document.getElementById("wordGhostText");
+    var brush = document.getElementById("wordBrush");
     var penEl = document.getElementById("wordPen");
-    var ghostEl = document.getElementById("wordGhost");
+    var gradEl = document.getElementById("wordRainbow");
     var aboutSection = document.getElementById("about-screen");
+    var wordEl = document.getElementById("aboutScreenWord");
+    if (!inkText || !ghostText || !brush || !penEl || !aboutSection || !wordEl) return;
 
-    if (inkEl && penEl && ghostEl && aboutSection) {
-      var NS = "http://www.w3.org/2000/svg";
-      // 幽灵预描：整词淡线（按笔顺组，全部显示作全貌提示）
-      aboutStrokes.strokeD.forEach(function (d) {
-        var p = document.createElementNS(NS, "path");
-        p.setAttribute("d", d);
-        p.setAttribute("class", "word-ghost");
-        p.setAttribute("fill", "none");
-        ghostEl.appendChild(p);
-      });
-      // 构建墨迹 SVG：把每笔作为独立 path，累积长度以支持正序(笔顺)书写
-      var inkGroup = inkEl;
-      var strokePaths = aboutStrokes.strokeD.map(function (d) {
-        var p = document.createElementNS(NS, "path");
-        p.setAttribute("d", d);
-        p.setAttribute("class", "word-ink");
-        p.setAttribute("fill", "none");
-        inkGroup.appendChild(p);
-        return p;
-      });
+    var BOX_W = 1000, BOX_H = 260;  // 与 viewBox 一致
+    var FIT_W = 930;                // 目标字宽（左右各留一点余量给起收笔）
+    var TRIGGER = 0.6;              // 顶边越过视口 60% 才开演
+    var DUR = 2000;
+    var brushLen = 0;
+    var started = false;
 
-      // 测量每笔长度 + 累计起点
-      var lens = strokePaths.map(function (p) { return p.getTotalLength(); });
-      var totalLen = lens.reduce(function (a, b) { return a + b; }, 0);
-      var starts = [];
-      var acc = 0;
-      var i;
-      for (i = 0; i < lens.length; i++) { starts.push(acc); acc += lens[i]; }
+    // 量字 → 缩放字号填满画布 → 居中 → 定渐变区间与笔刷路径
+    function layout() {
+      var base = parseFloat(window.getComputedStyle(inkText).fontSize) || 150;
+      var b = inkText.getBBox();
+      if (!b.width || !b.height) return;
 
-      // 全局进度 t in [0,1] -> 每笔的 dashoffset（正序写出，非整词同时泄出）
-      function render(t) {
-        var g = t * totalLen;
-        for (var k = 0; k < strokePaths.length; k++) {
-          var L = lens[k];
-          strokePaths[k].style.strokeDasharray = L + " " + L;
-          strokePaths[k].style.strokeDashoffset = L - Math.max(0, Math.min(L, g - starts[k]));
-        }
-        // 笔尖定位：找到当前所处笔画，并让纸飞机朝向书写方向
-        var idx = lens.length - 1;
-        for (var m = 0; m < lens.length; m++) {
-          if (g < starts[m] + lens[m]) { idx = m; break; }
-        }
-        var local = Math.max(0, Math.min(lens[idx], g - starts[idx]));
-        var pt = strokePaths[idx].getPointAtLength(local);
-        // 取前方一点求方向角（纸飞机机头朝前进方向）
-        var ahead = strokePaths[idx].getPointAtLength(Math.min(lens[idx], local + 2));
-        var ang = Math.atan2(ahead.y - pt.y, ahead.x - pt.x) * 180 / Math.PI;
-        penEl.setAttribute("transform", "translate(" + pt.x + " " + pt.y + ") rotate(" + ang + ")");
+      var fs = Math.max(40, Math.min(280, base * (FIT_W / b.width)));
+      // 必须写成内联 style：CSS 类里的 font-size 会盖掉同名的 SVG 呈现属性
+      inkText.style.fontSize = fs + "px";
+      ghostText.style.fontSize = fs + "px";
+
+      // 居中用 x/y 几何属性而非 transform：getBBox 不含元素自身 transform，避免量错
+      var nb = inkText.getBBox();
+      var nx = 500 + (BOX_W / 2 - (nb.x + nb.width / 2));
+      var ny = 150 + (BOX_H / 2 - (nb.y + nb.height / 2));
+      inkText.setAttribute("x", nx); inkText.setAttribute("y", ny);
+      ghostText.setAttribute("x", nx); ghostText.setAttribute("y", ny);
+
+      var box = inkText.getBBox();
+      if (gradEl) {
+        gradEl.setAttribute("x1", box.x.toFixed(1));
+        gradEl.setAttribute("y1", "0");
+        gradEl.setAttribute("x2", (box.x + box.width).toFixed(1));
+        gradEl.setAttribute("y2", "0");
       }
+      // 笔刷：从字左外缘扫到右外缘，纵向走在画布中线上，带一点起伏
+      // 纵向用画布中线而非 box：box 可能是字体 em 盒（含大量升降部留白），会把它拉偏
+      var y0 = BOX_H / 2;
+      var x0 = box.x - box.width * 0.06;
+      var x1 = box.x + box.width * 1.06;
+      var amp = 14;
+      var dx = x1 - x0;
+      brush.setAttribute("d",
+        "M " + x0.toFixed(1) + " " + (y0 - amp).toFixed(1) +
+        " C " + (x0 + dx * 0.30).toFixed(1) + " " + (y0 + amp).toFixed(1) +
+        " " + (x0 + dx * 0.64).toFixed(1) + " " + (y0 - amp * 1.5).toFixed(1) +
+        " " + x1.toFixed(1) + " " + (y0 + amp * 0.5).toFixed(1));
+      brush.setAttribute("stroke-width", "260");  // 略大于画布高，保证整字高度都被覆盖
+      brushLen = brush.getTotalLength();
+      brush.style.strokeDasharray = brushLen + " " + brushLen;
+    }
 
-      // 截图 / 减少动效：完整显示 + 隐藏笔尖
+    function render(t) {
+      if (!brushLen) return;
+      var p = t < 0 ? 0 : (t > 1 ? 1 : t);
+      brush.style.strokeDashoffset = brushLen * (1 - p);
+      var cur = brush.getPointAtLength(brushLen * p);
+      var ahead = brush.getPointAtLength(Math.min(brushLen, brushLen * p + 3));
+      var ang = Math.atan2(ahead.y - cur.y, ahead.x - cur.x) * 180 / Math.PI;
+      penEl.setAttribute("transform",
+        "translate(" + cur.x.toFixed(1) + " " + cur.y.toFixed(1) + ") rotate(" + ang.toFixed(1) + ")");
+      penEl.style.opacity = p >= 1 ? "0" : "1";
+    }
+
+    function play() {
+      if (started) return;
+      started = true;
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+      var t0 = null;
+      function frame(now) {
+        if (t0 === null) t0 = now;
+        var p = (now - t0) / DUR;
+        if (p > 1) p = 1;
+        render(p * p * (3 - 2 * p));  // smoothstep：起笔轻 → 行笔稳 → 收笔缓
+        if (p < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function visible() {
+      var r = wordEl.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      return r.top < vh * TRIGGER && r.bottom > 0;
+    }
+    function check() { if (visible()) play(); }
+
+    function init() {
+      layout();
+      if (!brushLen) return;
       if (isShot || reduceMotion) {
         render(1);
         penEl.style.opacity = 0;
-      } else {
-        var aboutDone = false;
-        var dur = 2200;
-        function animateAbout() {
-          if (aboutDone) return;
-          var start = null;
-          function frame(now) {
-            if (aboutDone) return;
-            if (start === null) start = now;
-            var p = Math.min((now - start) / dur, 1);
-            var eased = 1 - Math.pow(1 - p, 3); // ease-out
-            render(eased);
-            if (p < 1) {
-              requestAnimationFrame(frame);
-            } else {
-              aboutDone = true;
-            }
-          }
-          requestAnimationFrame(frame);
-        }
-        // 进入视口即触发书写
-        if ("IntersectionObserver" in window) {
-          var aboutObserver = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-              if (entry.isIntersecting) {
-                animateAbout();
-                aboutObserver.disconnect();
-              }
-            });
-          }, { threshold: 0.35 });
-          aboutObserver.observe(aboutSection);
-        } else {
-          render(1);
-        }
+        return;
       }
+      render(0);
+      window.addEventListener("scroll", check, { passive: true });
+      window.addEventListener("resize", check, { passive: true });
+      check();
+      window.setTimeout(check, 400);   // 兜底：直接落在本屏 / 锚点跳转
     }
-  }
+
+    // 等字体真正就绪再量字，否则量到的是后备字体字宽，缩放会错
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('400 150px "Pacifico"').then(init, init);
+    } else {
+      init();
+    }
+  })();
 })();
 
 /* =========================================================

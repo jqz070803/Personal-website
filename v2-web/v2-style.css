@@ -523,6 +523,16 @@ b {
   font-weight: 500;
 }
 
+/* 手写单词：内置花体字体（Pacifico · SIL OFL 许可，见 assets/fonts/Pacifico-OFL.txt）
+   丝滑的关键：不再描摹路径，改由字形轮廓定边缘 → 曲线天然平滑无棱角 */
+@font-face {
+  font-family: "Pacifico";
+  src: url("assets/fonts/pacifico-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 .about-screen__word {
   width: min(100%, 760px);
   margin: 0 auto;
@@ -534,29 +544,32 @@ b {
   overflow: visible;
 }
 
-/* 幽灵预描：整词淡线（提示即将写出的全貌） */
-.word-ghost {
+/* 单词两层：幽灵淡线（全貌提示）+ 彩虹墨迹（被遮罩从左向右逐段揭示）
+   字号由 JS 按实际字宽缩放填满，故此处只给一个基准值 */
+.word-ghost-text,
+.word-ink-text {
+  font-family: "Pacifico", "Brush Script MT", "Segoe Script", cursive;
+  font-weight: 400;
+  font-size: 150px;
+}
+
+.word-ghost-text {
+  fill: rgba(255, 255, 255, 0.1);
+}
+
+/* 笔刷：圆头粗描边，作遮罩把墨迹"写"出来（白色=显示，粗细由 JS 按字高设定） */
+.word-brush {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
-  stroke-width: 10;
+  stroke: #fff;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* 墨迹路径：由 JS 按笔顺逐笔拉出（加粗 + 圆头圆角，更接近真实笔触） */
-.word-ink {
-  fill: none;
-  stroke: #f6f1e6;
-  stroke-width: 10;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* 笔尖：小纸飞机，跟随书写点并朝向前进方向 */
+/* 笔尖：小纸飞机，跟随推进点并朝向前进方向 */
 .word-pen {
   fill: #ffb347;
   filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.85));
-  transition: r 0.2s ease;
+  transition: opacity 0.35s ease;
 }
 
 .about-screen__line {
@@ -594,7 +607,7 @@ b {
 html.shot .about-screen {
   min-height: 60vh;
 }
-html.shot .word-ink {
+html.shot .word-brush {
   stroke-dasharray: none;
   stroke-dashoffset: 0;
 }
@@ -1583,7 +1596,7 @@ html.shot .write-char {
     filter: blur(0);
     animation: none;
   }
-  .word-ink {
+  .word-brush {
     stroke-dasharray: none;
     stroke-dashoffset: 0;
   }

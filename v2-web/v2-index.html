@@ -6,7 +6,7 @@
   <meta name="description" content="江沁钊的个人主页 —— 一个行走于山川湖海之间的观察者，用镜头记录每一帧美好。" />
   <title>江沁钊 · 行走于山川湖海的观察者</title>
   <!-- 版本号 ?v= 用于强制浏览器取新样式：改动 CSS 后请同步+1（避免旧样式被缓存导致"改了看不见"） -->
-  <link rel="stylesheet" href="v2-style.css?v=9" />
+  <link rel="stylesheet" href="v2-style.css?v=10" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -204,12 +204,28 @@
       <div class="about-screen__bg" aria-hidden="true"></div>
       <div class="about-screen__inner">
         <p class="about-screen__eyebrow">ABOUT · ME</p>
-        <!-- 手写单词：SVG 单笔画路径 + 幽灵预描 + 笔尖跟随 -->
-        <div class="about-screen__word" aria-label="About me">
+        <!-- 手写单词：真字体字形（边缘由字形轮廓决定，天然无棱角）+ 彩虹渐变 + 遮罩推进"写出" + 笔尖跟随 -->
+        <div class="about-screen__word" id="aboutScreenWord" aria-label="About me">
           <svg class="word-svg" viewBox="0 0 1000 260" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-            <g class="word-ghost" id="wordGhost"></g>
-            <g class="word-ink" id="wordInk"></g>
-            <!-- 笔尖：小纸飞机（JS 沿笔画方向旋转跟随；几何居中于原点便于旋转） -->
+            <defs>
+              <!-- 彩虹渐变：沿单词横向铺满（左绿 → 右蓝），x1/x2 由 JS 按实际字宽设定 -->
+              <linearGradient id="wordRainbow" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0">
+                <stop offset="0" stop-color="#5fd35f" />
+                <stop offset="0.17" stop-color="#b8e34a" />
+                <stop offset="0.34" stop-color="#ffd23f" />
+                <stop offset="0.5" stop-color="#ff9b42" />
+                <stop offset="0.66" stop-color="#ff5f9e" />
+                <stop offset="0.83" stop-color="#b06bff" />
+                <stop offset="1" stop-color="#4aa8ff" />
+              </linearGradient>
+              <!-- 遮罩：一条圆头粗描边从左向右推进（白色=显示），圆头的弧线就是推进边 -->
+              <mask id="wordBrushMask" maskUnits="userSpaceOnUse" x="-60" y="-200" width="1120" height="660">
+                <path id="wordBrush" class="word-brush" d="M -40 160 L 1040 160" />
+              </mask>
+            </defs>
+            <text class="word-ghost-text" id="wordGhostText" x="500" y="150" text-anchor="middle">about me</text>
+            <text class="word-ink-text" id="wordInkText" x="500" y="150" text-anchor="middle" fill="url(#wordRainbow)" mask="url(#wordBrushMask)">about me</text>
+            <!-- 笔尖：小纸飞机（JS 沿推进方向旋转跟随；几何居中于原点便于旋转） -->
             <g class="word-pen" id="wordPen" aria-hidden="true">
               <path d="M9 0 L-7 -6 L-2 0 L-7 6 Z" />
             </g>
@@ -669,7 +685,6 @@
     </p>
   </footer>
 
-  <script src="v2-about-data.js?v=9"></script>
-  <script src="v2-script.js?v=9"></script>
+  <script src="v2-script.js?v=10"></script>
 </body>
 </html>
