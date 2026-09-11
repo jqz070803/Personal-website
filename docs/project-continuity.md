@@ -67,8 +67,8 @@ artifacts/
 v2-web/
 ├── v2-index.html          # 新增 #study 学业板块（导航新增"学业"，序号顺延至联系08）；<main> 前新增 #bgParallax 背景块；足迹板块改为 .journey-mosaic（10 张 .ms-tile，内含 <img class="ms-tile__media"> 真实照片）；首屏 .hero 内新增 <video class="hero__video">（实拍循环视频背景）+ .hero__veil（压暗遮罩）；01 关于左栏改为 .about-photo__frame 内的 4 张 .about-photo__img 照片墙（舞龙 / 华为门店自拍 / 地铁自拍 / 证件照，滚动时依次交叉渐显）
 ├── v2-style.css           # 学业板块样式 + 响应式；第二页手写单词 `.about-screen__word` / `.word-svg` / `.word-ghost-text` / `.word-ink-text` / `.word-brush` / `.word-pen`（`@font-face` 内置 Pacifico + 双层 `<text>` + 圆头遮罩推进 + 纸飞机笔尖）；.bg-parallax* 背景层 + 磨砂卡片 + 移动端/reduced-motion 降级；.journey-mosaic/.ms-tile* 拼图骨架与入场动效（.ms-tile__media 即 <img>）；.hero__video/.hero__veil/.hero.is-video*（视频层 + 遮罩 + 星空让位，底部收 #08131f 衔接第二页）；.about-photo__frame/__img 绝对堆叠照片墙；.nav::after 毛玻璃底（底边 22px mask 渐隐，消除切断太阳辉光的硬边）；.ms-tile__cap 暗角收紧；#social 桌面底留白 72px；html.shot
-├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏；第二页手写单词由独立 IIFE 驱动：**内置 Pacifico 字体字形 + 彩虹渐变 + 圆头遮罩推进**，按单词顶边越过视口 60% 才开演，`?shot=1`/reduced-motion 定格）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（**进入视野才开演**：元素顶边越过视口 80% 触发，四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
-├── v2-about-data.js       # ⚠ **已不再被引用**（第九次迭代改用真字体字形，`<script>` 标签已移除，文件留盘备查）："About me" 手写 SVG 笔画数据（网格化描摹路径，是"弯曲处有棱角"的根源，己弃用）
+├── v2-script.js           # 沿用 v1 交互（含 splitText 拆字：标题空白先归一再拆，否则整行会被推偏；第二页手写单词由独立 IIFE 驱动：**内置 Pacifico 字体字形 + 彩虹渐变 + canvas 逐像素揭示，揭示时刻 = 笔顺轨迹上离该像素最近那一点的弧长**，按单词顶边越过视口 60% 才开演，`?shot=1`/reduced-motion 定格，`?replay=1&dur=…` 可循环重播）；末尾四个独立 IIFE：01 照片墙交叉渐显（按 .about-main 的滚动行程依次溶解，reduced-motion 定格证件照）、视差（data-px 位移 + is-parallax-on 淡入）、足迹拼图（**进入视野才开演**：元素顶边越过视口 80% 触发，四周涌入 + 错峰归位）、首屏视频（play() resolve 才加 .hero.is-video，被拒/失败/降级静默回落渐变）
+├── v2-about-data.js       # ★ **笔顺唯一真源（勿删勿改）**：`window.ABOUT_STROKES = { word, viewBox, strokeD: […] }`，9 条 SVG path = 真人书写顺序（笔1 'a'+'b' 连笔 / 笔2 'o' / 笔3 'u' / 笔4 't'竖 / 笔5 't'横 / 笔6~8 'm'三竖 / 笔9 'e'）。`v2-script.js` 用它采样笔尖轨迹（不再用它描摹字形——字形来自 Pacifico 字体）
 ├── assets/
 │   ├── journey/           # ★ 足迹实拍照片（10 张，共 2.5MB）：01-shan / 02-hu / 03-hai / 04-cheng-yuren / 05-xingkong / 06-zhuiguang / 07-guzhen / 08-caoyuan / 09-richu / 10-lushang .jpg
 │   ├── hero/              # ★ 首屏视频背景（8.1MB）：hero-loop.mp4（54.8s / 854x480 / H.264 / 无音轨 / faststart）+ hero-poster.jpg
@@ -78,7 +78,7 @@ v2-web/
     ├── gen-bg-parallax.py # ★ 山峦脊线生成器：幂等、可复现，改 LAYERS/PALETTE 即可调参
     └── build-hero-loop.ps1# ★ 首屏视频循环构建器：幂等、可复现（EDL 与交叉时长在文件顶部常量），**不依赖字体/系统目录**
 docs/
-└── v2-progress-report.md  # v2 迭代进度报告（含九个追加迭代章节）
+└── v2-progress-report.md  # v2 迭代进度报告（含十一个追加迭代章节）
 artifacts/
 └── screenshots/
     ├── v2-study-desktop.png     # 桌面端「学业 · 专业」板块（含改写后的学习日常）
@@ -124,10 +124,13 @@ artifacts/
 - **C1 足迹字幕**：`.ms-tile__cap` 暗角 `0% → 0.5 @44% → 0.9 @100%` + 轻 `text-shadow`（亮部照片压到标题行也读得清）。
 - **C2 导航底边**：毛玻璃底改挂 `.nav::after` + 底边 22px `mask-image` 渐隐，不再把视差太阳辉光横向切断（原 `border-bottom` 发丝线已移除）。
 - **C3 06 社交面板**：桌面 `#social.section{padding-bottom:72px}`，消掉面板下半截的 56px 空档（面板高 555 → 499）。
-- 迭代过程见 `docs/v2-progress-report.md` 的**九个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3；足迹拼图触发时机修复；第二页手写单词改真字体字形 + 彩虹遮罩写出）。
-- **第二页手写单词（第九次迭代起）**：`v2-index.html` 的 `#aboutScreenWord` 内 = 幽灵层 `#wordGhostText` + 彩虹层 `#wordInkText`（`fill="url(#wordRainbow)"`、`mask="url(#wordBrushMask)"`）+ 遮罩路径 `#wordBrush` + 纸飞机 `#wordPen`；
-  字体 `@font-face "Pacifico"`（`assets/fonts/pacifico-latin.woff2`），字号由 JS 按画布宽自适应（内联 `style.fontSize`，**不可用呈现属性**），渐变 `x1/x2` 按实测字宽写死。
-  单词实体几何（桌面 1440×900）：`#aboutScreenWord` 屏幕位 `x340 w760 h198`、文档 absTop **1276** → 开演 scrollY ≈ **736**；墨迹实测 **699×179**、`x 373..1072`、`y 477..656`。
+- 迭代过程见 `docs/v2-progress-report.md` 的**十一个**「追加迭代」章节（山峦 r5→r6→r8→r9 四轮；足迹拼图；接入真实照片 + 动画节奏打磨；首屏 hero 视频；收尾打磨；首屏姓名居中 + 照片位；01 照片墙 + C1/C2/C3；足迹拼图触发时机修复；第二页手写单词改真字体字形 + 彩虹遮罩写出；手写单词改"沿笔画测地距离场一笔一笔写出"；手写单词改"笔顺数据驱动的最近轨迹点揭示"）。
+- **第二页手写单词（第十一次迭代定稿机制）**：`v2-index.html` 的 `#aboutScreenWord` 内 = `<canvas id="wordCanvas">`（逐像素画字）+ 纸飞机 `<span id="wordPen">`（内嵌 SVG 路径）。字形用内置 **Pacifico**（`assets/fonts/pacifico-latin.woff2`，SIL OFL）居中 `fillText` 到离屏 canvas，取 `alpha > 8` 得墨迹蒙版（不依赖字体指标）。**揭示顺序 = 笔顺数据**：
+  1. `v2-about-data.js` 的 9 条 path 在隐藏 `<svg>` 上用 `getTotalLength()`/`getPointAtLength()` 采样成笔尖轨迹（每 1.5px 一点，实测 `trkN=2087`），x/y **分别**线性映射到墨迹 bbox（`ksx/ksy`，取笔迹自带的"整词外接框"），累积弧长 `trkS`（笔间加 `GAP = 词宽×0.012`，`trkL=3172`）；
+  2. **每个墨迹像素的书写时刻 = 轨迹上离它最近那一点的弧长**（16px 网格 + 逐圈外扩提前中断；找不到再全扫兜底）。笔尖 `pen(p)` 用同一个弧长参数 `target = p × trkL` 沿轨迹走 → **笔尖到哪儿、哪儿的墨正好显完**，提笔空隙无墨对应 = 自然停顿；
+  3. 逐帧绘制：`t ≤ p` 上彩虹（按 x 铺七档渐变），`t > p` 留 12% 白幽灵层；`t` 用 `smoothstep` 走 2000ms。
+  单词实体几何（桌面 1440×900）：`#aboutScreenWord` 屏幕位 `x340 w760 h198`、文档 absTop **1276** → 开演 scrollY ≈ **736**；墨迹实测 **760×198**（canvas 尺寸）、墨迹 bbox `x 32..738 / y 8..189`。
+  ⚠️ 历史教训（勿回退）：**不要**用"从笔尖出发沿墨迹累加像素距离"（Dijkstra 时间场）定揭示时刻——轨迹弧长比水平距离长得多（笔1 弧长 892px 只横跨 179px），加性距离会把空间相邻、笔序很晚的墨提前染色，实测整个 "about" 被并进第一笔时间窗，观感就是"一大片横向一起亮"。
   ⚠️ 已知取舍：字体轮廓是并集整体，参考图那种"笔画交叠半透明"无法复现（详见第九次追加迭代）。
 
 ## 6. 技术栈与运行方式
@@ -286,6 +289,12 @@ artifacts/
        数字验证（`wordstat.ps1`）：定格蒙版 44,750px、中途帧已写 **61.2%**、**部分着色列 196/537 = 36.5%**（横扫只会 ~0%）、
        对齐 dx=0 且 ±1px 容差后几乎不变（27,387 → 27,490，排除错位假象）、笔尖中心 **695.5** 紧贴前沿 745。
        实拍 `v2-about-word-writing.png` / `v2-about-word-rest.png` / `v2-about-word-mobile.png`（三张均已换新）。详见第十次追加迭代。
+       ⚠️ 该版**仍不是"一笔一笔写"**：Dijkstra 的加性像素距离会把空间相邻、笔序很晚的墨提前染色（逐笔窗口实测第一笔吞掉 69% 墨迹），**已被第十一次迭代整条替换**。
+   12. **手写单词改用"笔顺数据驱动的最近轨迹点揭示"（定稿）**：用户反馈"最开始还不是彩色的时候笔画都是对的，直接按那个版本的笔画顺序" →
+       笔顺回归**数据**：`v2-about-data.js` 的 9 条 path 采样成笔尖轨迹，每个墨迹像素的揭示时刻 = 轨迹上**离它最近那一点**的弧长（16px 网格 + 逐圈外扩），
+       归一化用**笔尖总弧长 `trkL`**（与 `pen()` 同一把尺 ⇒ 笔尖到哪、墨正好显完）；删除整套 ② Zhang-Suen 细化 / 深搜走笔 / Dijkstra 距离场 / `DX/DY/DW` 与全部临时诊断块。
+       数字验证（`?worddebug=1` 回传）：`trkN=2087 / trkL=3172 / strokes=9`；逐笔时间窗与自己 x 范围吻合（第一笔 `xr=32..226`，原为 `32..468`）、
+       `xbT` 严格递增、**x 分箱单调 17/17**、各时间档墨迹量 1398~2941 均匀（无 31662 巨桶）。详见第十一次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 

@@ -242,21 +242,32 @@
     }
   }
 
-  /* ---------- About 简介屏：手写单词"about me"（真字体字形 + 沿笔画书写）----------
-     v1 是"描摹一条折线路径"（段间切线不连续 → 放大见棱角）；上一版改成"整词水平
-     扫描遮罩"，边缘是平滑了，但观感是"从左向右被填充"，不像在写字。
-     本版保留字形（仍由内置花体字体 Pacifico · SIL OFL 渲染 → 边缘天然平滑）+ 彩虹，
-     只改"墨迹何时出现"的判据，改成**沿笔画的测地距离**：
-       ① 把字形画到画布、取 alpha 得到墨迹蒙版；
-       ② 8 邻接找出每个连通块，取该块最左列最上的墨迹像素作"起笔点"（笔画起始端）；
-       ③ 以起笔点为源、只在墨迹内部做 Dijkstra（8 邻接 + 欧氏权重）= 测地距离场：
-          距离场沿笔画推进，而不是横扫 —— 单连通的花体连笔字会按**笔顺**依次经过
-          每一段笔画（弧长优先），所以读起来就是"一笔连贯写出来"；
-       ④ 块与块按起笔点 x 从左到右排先后，书写窗口互不重叠、时长与笔画长度成正比
-          （任何时刻只有一处笔尖，一笔一笔来；整段时间正好用完）。
-     彩虹按列取样（左绿 → 右蓝），与上一版配色一致；笔尖按当前推进点的质心定位。
+  /* ---------- About 简介屏：手写单词"about me"（真字体字形 + 数据自带笔顺书写）----------
+     v1 是"描摹一条折线路径"（段间切线不连续 → 放大见棱角）；第二版改成"整词水平
+     扫描遮罩"，边缘平滑了，但观感是"从左向右被填充"，不像在写字；第三版在**墨迹内部**
+     算测地距离，想按笔顺推进，结果用户仍反馈"偏横向填充"——原因：笔画宽约 30px，
+     等距前沿在笔画内部是一条**竖线**整体右移，粗笔画上又退化成了横扫。
+      第四～六版试图让算法自己"猜"笔顺（骨架测地距离 / 贪心走笔 / 回溯式深度优先走笔），
+      都不对。用户点破了关键：**最初那版（还没有彩虹的时候）笔顺是对的** ——
+      因为那版用的是 v2-about-data.js 里 9 条手工排好顺序的笔画轨迹（真人书写顺序：
+      "a+b 连笔 → o → u → t 竖 → t 横 → m 三竖 → e"），不是猜出来的。
+      第七版又把"算法猜出来的骨架时间"用 Dijkstra 铺满整片墨迹，反而更糟：实测整个
+      "about"（x 32..468）被并进了第一笔的时间窗 —— 因为轨迹弧长比水平距离长得多
+      （笔1 绕圈+升部弧长 892px 却只横跨 179px），"空间上多久能走到"压根不是笔序。
+      所以本版彻底删掉骨架/走笔/测地距离这一整套，把"笔顺"完全交还给那份数据：
+        ① 把字形画到画布、取 alpha 得到墨迹蒙版（顺带记下墨迹包围盒：轨迹对位要用它）；
+        ② （已删除）Zhang-Suen 细化 + 剪毛刺 + 各种走笔/距离场；
+        ③ 读取 ABOUT_STROKES.strokeD（9 笔画），用隐藏 SVG 的 getTotalLength/getPointAtLength
+           采样成有序点 + 累积弧长，再线性映射到本画布的墨迹包围盒上；笔与笔之间补一段固定的
+           "提笔空隙"弧长。这就是**笔顺的唯一来源**，与数据里的书写顺序完全一致；
+        ④ 每个墨迹像素的书写时间 = 轨迹上离它最近的那一点的弧长（16px 网格 + 逐圈外扩加速）。
+           语义就是"笔尖扫到哪儿、哪儿的墨就出现"：笔序单调，不会让早笔串染晚笔的墨；
+        ⑤ 归一化：时刻 = 弧长 / 轨迹总弧长（0..1），与笔尖共用同一把尺 ⇒ 笔尖到哪儿、
+           哪儿的墨正好显完；提笔空隙那段弧长没有墨迹对应，动画里自然成了"抬笔挪位置"的停顿。
+      彩虹按列取样（左绿 → 右蓝）；笔尖沿轨迹点走，提笔空隙处藏起来。
+     评审开关：URL 加 ?replay=1 循环重播、?dur=4000 放慢单次时长（毫秒）；点一下单词也能重播。
      截图 / 减少动效：直接显示完整墨迹 + 隐藏笔尖。
-     触发判据与 03 足迹拼图同源：单词顶边越过视口 60% 才开演（不早播、不重播）。 */
+     触发判据与 03 足迹拼图同源：单词顶边越过视口 60% 才开演（不早播）。 */
   (function () {
     var canvas = document.getElementById("wordCanvas");
     var penEl = document.getElementById("wordPen");
@@ -274,14 +285,18 @@
     var STOPS = [[0, 95, 211, 95], [0.17, 184, 227, 74], [0.34, 255, 210, 63],
                  [0.5, 255, 155, 66], [0.66, 255, 95, 158], [0.83, 176, 107, 255],
                  [1, 74, 168, 255]];
-    var DX = [1, -1, 0, 0, 1, 1, -1, -1];
-    var DY = [0, 0, 1, -1, 1, -1, 1, -1];
-    var DW = [1, 1, 1, 1, 1.41421356, 1.41421356, 1.41421356, 1.41421356];
+
+    // 评审开关（都不影响默认观感）：?replay=1 → 循环重播；?dur=4000 → 单次时长（毫秒，600..20000）。
+    // 另外：点一下单词本身也能重播一遍。
+    var LOOP = /[?&]replay=1/.test(location.search);
+    var mDur = /[?&]dur=(\d+)/.exec(location.search);
+    if (mDur) DUR = clamp(parseInt(mDur[1], 10), 600, 20000);
 
     var W = 0, H = 0, dpr = 1;
     var imgData = null, inkOff = null, inkA = null, inkT = null;
     var colR = null, colG = null, colB = null;
-    var ready = false, started = false, drawn = -1;
+    var trkX = null, trkY = null, trkS = null, trkPen = null, trkN = 0, trkL = 1;  // 书写轨迹（笔顺 + 笔尖定位）
+    var ready = false, started = false, playing = false, drawn = -1;
     var penOn = false, penInit = false, penX = 0, penY = 0, penAng = -18;
     var resizeTimer = 0;
 
@@ -301,42 +316,7 @@
       }
     }
 
-    /* ---- Dijkstra 用的简易二叉堆（惰性删除：允许重复入堆，出堆时用 done 去重）---- */
-    var hCap = 4096, hN = 0, hD = new Float32Array(hCap), hI = new Int32Array(hCap), hTop = 0;
-    function hPush(d, i) {
-      if (hN === hCap) {
-        hCap *= 2;
-        var nd = new Float32Array(hCap); nd.set(hD); hD = nd;
-        var ni = new Int32Array(hCap); ni.set(hI); hI = ni;
-      }
-      var k = hN++; hD[k] = d; hI[k] = i;
-      while (k > 0) {
-        var par = (k - 1) >> 1;
-        if (hD[par] <= hD[k]) break;
-        var td = hD[par]; hD[par] = hD[k]; hD[k] = td;
-        var ti = hI[par]; hI[par] = hI[k]; hI[k] = ti;
-        k = par;
-      }
-    }
-    function hPop() {
-      hTop = hD[0];
-      var top = hI[0];
-      hN--;
-      hD[0] = hD[hN]; hI[0] = hI[hN];
-      var k = 0;
-      for (;;) {
-        var l = 2 * k + 1, rr = l + 1, s = k;
-        if (l < hN && hD[l] < hD[s]) s = l;
-        if (rr < hN && hD[rr] < hD[s]) s = rr;
-        if (s === k) break;
-        var a = hD[s]; hD[s] = hD[k]; hD[k] = a;
-        var b = hI[s]; hI[s] = hI[k]; hI[k] = b;
-        k = s;
-      }
-      return top;
-    }
-
-    /* ---- 一次性构建：量字 → 绘制 → 墨迹蒙版 → 连通块 + 测地距离场 → 时间表 ---- */
+    /* ---- 一次性构建：量字 → 绘制 → 墨迹蒙版 + 包围盒 → 笔迹轨迹 → 揭示时刻表 ---- */
     function build() {
       var cssW = wordEl.clientWidth;
       if (!cssW) return;
@@ -375,104 +355,155 @@
       imgData = ctx.getImageData(0, 0, W, H);
       var d = imgData.data, N = W * H, p, o;
 
-      // 墨迹蒙版（alpha > 8；抗锯齿边缘一并算作墨迹，避免出现毛边）
+      // 墨迹蒙版（alpha > 8；抗锯齿边缘一并算作墨迹，避免出现毛边）+ 墨迹包围盒
       var mask = new Uint8Array(N), inkN = 0;
-      for (p = 0, o = 3; p < N; p++, o += 4) if (d[o] > 8) { mask[p] = 1; inkN++; }
+      var bx0 = W, bx1 = -1, by0 = H, by1 = -1, mx, my;
+      for (p = 0, o = 3; p < N; p++, o += 4) {
+        if (d[o] > 8) {
+          mask[p] = 1; inkN++;
+          mx = p % W; my = (p - mx) / W;
+          if (mx < bx0) bx0 = mx;
+          if (mx > bx1) bx1 = mx;
+          if (my < by0) by0 = my;
+          if (my > by1) by1 = my;
+        }
+      }
       if (!inkN) return;
 
+      // ② 骨架 / 走笔 / 测地距离场：全部删掉了。
+      //    历史：细化出 1px 骨架 → 在骨架上用"深度优先走笔"或"测地距离"猜笔顺（失败 7 次）。
+      //    失败根因有两层：
+      //      a) 骨架拓扑并不能确定笔顺（a/b/o 的圈细化后是闭环、没有端点，谁先谁后无从判定）；
+      //      b) 就算骨架时间是对的，再"沿墨迹累加像素距离"也会坏 —— 粗笔画上空间相邻的两处
+      //         笔序可以差很多，早笔的距离场会把晚笔的墨提前染上色。实测整个 "about"
+      //         （x 32..468）都被并进了第一笔的时间窗，看画面又成了"一大片一起亮"。
+      //    现在笔顺 100% 来自 ③ 的书写轨迹数据，墨迹上色只是"取最近的那个轨迹点"。
+
+      // ③ 笔顺序列：不再让算法"猜"笔顺，直接用最初那版手工排好顺序的书写轨迹数据
+      //    （v2-about-data.js 的 window.ABOUT_STROKES.strokeD：9 条按真人书写顺序一笔一笔
+      //     描下来的 path）。用隐藏 SVG 的 getPointAtLength 采样成有序点 + 累积弧长，
+      //    再线性映射到本画布的墨迹包围盒上。笔与笔之间补一段固定"提笔空隙"弧长。
+      trkX = []; trkY = []; trkS = []; trkPen = []; trkN = 0; trkL = 1;
+      (function () {
+        var SD = (window.ABOUT_STROKES && window.ABOUT_STROKES.strokeD) || null;
+        if (!SD || !SD.length) return;
+        var NS = "http://www.w3.org/2000/svg";
+        var sv = document.createElementNS(NS, "svg");
+        sv.setAttribute("width", 0); sv.setAttribute("height", 0);
+        sv.style.cssText = "position:absolute;left:-99999px;top:0;width:0;height:0;overflow:hidden";
+        document.body.appendChild(sv);
+        var segs = [], rx0 = 1e18, rx1 = -1e18, ry0 = 1e18, ry1 = -1e18;
+        for (var sg = 0; sg < SD.length; sg++) {
+          var pe = document.createElementNS(NS, "path");
+          pe.setAttribute("d", SD[sg]);
+          sv.appendChild(pe);
+          var tl = 0;
+          try { tl = pe.getTotalLength() || 0; } catch (e) { tl = 0; }
+          if (tl <= 0) continue;
+          var nseg = Math.max(8, Math.round(tl / 1.5)), seg = [];
+          for (var sj = 0; sj <= nseg; sj++) {
+            var pt9 = pe.getPointAtLength(tl * sj / nseg);
+            seg.push([pt9.x, pt9.y]);
+            if (pt9.x < rx0) rx0 = pt9.x;
+            if (pt9.x > rx1) rx1 = pt9.x;
+            if (pt9.y < ry0) ry0 = pt9.y;
+            if (pt9.y > ry1) ry1 = pt9.y;
+          }
+          segs.push(seg);
+        }
+        document.body.removeChild(sv);
+        if (!segs.length || rx1 - rx0 < 1 || ry1 - ry0 < 1) return;
+        var ksx = (bx1 - bx0) / (rx1 - rx0), ksy = (by1 - by0) / (ry1 - ry0);
+        for (var s2 = 0; s2 < segs.length; s2++) {
+          var sg2 = segs[s2];
+          for (var s3 = 0; s3 < sg2.length; s3++) {
+            trkX.push(bx0 + (sg2[s3][0] - rx0) * ksx);
+            trkY.push(by0 + (sg2[s3][1] - ry0) * ksy);
+            trkPen.push(0);
+          }
+          trkPen[trkPen.length - 1] = 1;      // 这一笔收笔 → 与下一笔之间是提笔空隙
+        }
+        var GAP = (bx1 - bx0) * 0.012, acc = 0;
+        for (var s4 = 0; s4 < trkX.length; s4++) {
+          if (s4 > 0) {
+            var ddx = trkX[s4] - trkX[s4 - 1], ddy = trkY[s4] - trkY[s4 - 1];
+            acc += Math.sqrt(ddx * ddx + ddy * ddy);
+            if (trkPen[s4 - 1]) acc += GAP;   // 提笔空隙
+          }
+          trkS.push(acc);
+        }
+        trkN = trkX.length;
+        trkL = acc > 1e-4 ? acc : 1;
+      })();
+
+      // ④ 每个墨迹像素的书写时间 = 轨迹上离它最近的那一点的弧长。
+      //    这就是"笔尖扫到哪儿、哪儿的墨就出现"：笔顺完全由数据决定，没有任何猜测成分。
+      //    为什么不用"从笔尖出发沿墨迹累加距离"（Dijkstra 时间场）：那样算出来的时刻是
+      //    "空间上多久能走到"，而轨迹的弧长比水平距离长得多（笔1 的"a+b"有绕圈和升部，
+      //    弧长 892px 只横跨 179px），于是早笔的距离场会把空间相邻、笔序很晚的墨也提前染上色
+      //    —— 实测"about"整词都被并进了第一笔的时间窗，画面上就是"一大片横向一起亮"。
+      //    直接取最近轨迹点：笔序单调，不会串色。（用 16px 网格 + 逐圈外扩加速，避免
+      //    45960 个墨迹像素 × 2087 个轨迹点的全量比较。）
       var timeOf = new Float32Array(N);
-      var cid = new Uint16Array(N);
-      var seen = new Uint8Array(N);
-      var done = new Uint8Array(N);
-      var stack = new Int32Array(inkN);
-      var comp = new Int32Array(inkN);
-      var cLen = [], cMinX = [];     // 每块的笔画长度 / 起笔点 x
-      var K = 0, k, k2, q, qx, qy;
-
-      for (var p0 = 0; p0 < N; p0++) {
-        if (!mask[p0] || seen[p0]) continue;
-
-        // ① 洪水填充（8 邻接）取出一个连通块
-        var sp = 0, cn = 0, minX = p0 % W;
-        stack[sp++] = p0; seen[p0] = 1;
-        while (sp > 0) {
-          q = stack[--sp];
-          qx = q % W; qy = (q - qx) / W;
-          comp[cn++] = q;
-          if (qx < minX) minX = qx;
-          for (k = 0; k < 8; k++) {
-            var ex = qx + DX[k], ey = qy + DY[k];
-            if (ex < 0 || ey < 0 || ex >= W || ey >= H) continue;
-            var eq = ey * W + ex;
-            if (mask[eq] && !seen[eq]) { seen[eq] = 1; stack[sp++] = eq; }
+      timeOf.fill(-1);
+      if (trkN > 1) {
+        var CELL = 16, gw = Math.max(1, Math.ceil(W / CELL)), gh = Math.max(1, Math.ceil(H / CELL));
+        var gsum = new Int32Array(gw * gh + 1), gg, gk, gcell;
+        for (gg = 0; gg < trkN; gg++) {
+          gk = Math.min(gh - 1, (trkY[gg] / CELL) | 0) * gw + Math.min(gw - 1, (trkX[gg] / CELL) | 0);
+          gsum[gk + 1]++;
+        }
+        for (gg = 0; gg < gw * gh; gg++) gsum[gg + 1] += gsum[gg];
+        var gidx = new Int32Array(trkN), gfill = gsum.slice(0, gw * gh);
+        for (gg = 0; gg < trkN; gg++) {
+          gk = Math.min(gh - 1, (trkY[gg] / CELL) | 0) * gw + Math.min(gw - 1, (trkX[gg] / CELL) | 0);
+          gidx[gfill[gk]++] = gg;
+        }
+        for (p = 0; p < N; p++) {
+          if (!mask[p]) continue;
+          var qx3 = p % W, qy3 = (p - qx3) / W;
+          var cgx = Math.min(gw - 1, (qx3 / CELL) | 0), cgy = Math.min(gh - 1, (qy3 / CELL) | 0);
+          var bd3 = 1e36, bj3 = -1, rr, gx3, gy3;
+          for (rr = 0; rr <= 9; rr++) {
+            for (gy3 = cgy - rr; gy3 <= cgy + rr; gy3++) {
+              if (gy3 < 0 || gy3 >= gh) continue;
+              for (gx3 = cgx - rr; gx3 <= cgx + rr; gx3++) {
+                if (gx3 < 0 || gx3 >= gw) continue;
+                // 只看本圈新扩出来的一层（内层上一圈已经比过了）
+                if (rr > 0 && Math.abs(gx3 - cgx) < rr && Math.abs(gy3 - cgy) < rr) continue;
+                gcell = gy3 * gw + gx3;
+                for (var j5 = gsum[gcell], j5e = gsum[gcell + 1]; j5 < j5e; j5++) {
+                  var tj = gidx[j5], tdx3 = trkX[tj] - qx3, tdy3 = trkY[tj] - qy3;
+                  var td3 = tdx3 * tdx3 + tdy3 * tdy3;
+                  if (td3 < bd3) { bd3 = td3; bj3 = tj; }
+                }
+              }
+            }
+            if (bj3 >= 0 && rr >= 1 && bd3 <= (rr * CELL) * (rr * CELL)) break;  // 外圈不可能更近
           }
-        }
-
-        // ② 起笔点 = 该块最左列最上的墨迹像素（笔画起始端，自上而下入笔）
-        var seed = -1, bestY = 1e9, c, cx, cy;
-        for (c = 0; c < cn; c++) {
-          q = comp[c]; cx = q % W; cy = (q - cx) / W;
-          if (cx === minX && cy < bestY) { bestY = cy; seed = q; }
-        }
-        if (seed < 0) continue;
-
-        // ③ 块内测地距离场：只在墨迹内部扩散，所以距离 ≈ 笔尖沿笔画走过的路程
-        //    （不同连通块互不 8 邻接，故 done 可跨块复用）
-        var id = K++;
-        hN = 0;
-        hPush(0, seed);
-        var dmax = 0;
-        while (hN > 0) {
-          var u = hPop(), ud = hTop;
-          if (done[u]) continue;
-          done[u] = 1;
-          timeOf[u] = ud;
-          if (ud > dmax) dmax = ud;
-          var ux = u % W, uy = (u - ux) / W;
-          for (k2 = 0; k2 < 8; k2++) {
-            var vx = ux + DX[k2], vy = uy + DY[k2];
-            if (vx < 0 || vy < 0 || vx >= W || vy >= H) continue;
-            var v = vy * W + vx;
-            if (!mask[v] || done[v]) continue;
-            hPush(ud + DW[k2], v);
+          if (bj3 < 0) {                                  // 兜底：整条轨迹扫一遍
+            for (var j6 = 0; j6 < trkN; j6++) {
+              var ux6 = trkX[j6] - qx3, uy6 = trkY[j6] - qy3;
+              var ud6 = ux6 * ux6 + uy6 * uy6;
+              if (ud6 < bd3) { bd3 = ud6; bj3 = j6; }
+            }
           }
+          if (bj3 >= 0) timeOf[p] = trkS[bj3];
         }
-
-        // ④ 记下这一块：笔画长度（=最大测地距离）与起笔点 x，后面用来排先后、分时长
-        cLen[id] = dmax;
-        cMinX[id] = minX;
-        for (c = 0; c < cn; c++) cid[comp[c]] = id;
-      }
-      if (!K) return;
-
-      // ⑤ 分配书写时间：按起笔点从左到右定先后，每块时长与其笔画长度成正比。
-      //    窗口互不重叠 → 任何时刻只有一处笔尖，像手写一样一笔一笔来（不齐头并进）。
-      //    长度权重里掺一半"均分"，免得极短的块（字母上的点之类）来不及看清。
-      var order = [], i;
-      for (i = 0; i < K; i++) order.push(i);
-      order.sort(function (a, b) { return cMinX[a] - cMinX[b]; });
-      var totalLen = 0;
-      for (i = 0; i < K; i++) totalLen += cLen[order[i]];
-      if (totalLen <= 0) return;
-      var cOff = [], cDur = [], acc = 0;
-      for (i = 0; i < K; i++) {
-        var bid = order[i], avg = totalLen / K;
-        cDur[bid] = (0.5 * cLen[bid] + 0.5 * avg) / totalLen;
-        cOff[bid] = acc;
-        acc += cDur[bid];
       }
 
-      // ⑥ 压平成紧凑数组，逐帧只遍历墨迹像素；时间场已覆盖 [0,1] → 动画正好写完
+      // ⑤ 压平成紧凑数组：揭示时刻 = 最近轨迹点的弧长 / 轨迹总弧长（0..1）。
+      //    与笔尖共用同一个弧长尺度 ⇒ 笔尖到哪儿、哪儿的墨正好显完；提笔空隙那一段没有
+      //    墨迹对应 ⇒ 画面上就是"抬笔挪到下一起笔点"的短暂停顿。
       inkOff = new Int32Array(inkN);
       inkA = new Uint8Array(inkN);
       inkT = new Float32Array(inkN);
       var n2 = 0;
-      for (var p3 = 0; p3 < N; p3++) {
-        if (!mask[p3]) continue;
-        var ci = cid[p3], den = cLen[ci];
-        inkOff[n2] = p3 * 4;
-        inkA[n2] = d[p3 * 4 + 3];
-        inkT[n2] = cOff[ci] + (den > 1e-4 ? (timeOf[p3] / den) * cDur[ci] : cDur[ci]);
+      for (p = 0; p < N; p++) {
+        if (!mask[p]) continue;
+        inkOff[n2] = p * 4;
+        inkA[n2] = d[p * 4 + 3];
+        inkT[n2] = (trkN > 1 && timeOf[p] >= 0) ? clamp(timeOf[p] / trkL, 0, 1) : ((p % W) / (W - 1));
         n2++;
       }
       buildRainbow(W);
@@ -485,36 +516,40 @@
       p = clamp(p, 0, 1);
       if (p === drawn) return;
       drawn = p;
-      var d = imgData.data, n = inkOff.length;
-      var bandLo = p - 0.04;          // 同一帧内"正在写"的像素带
-      var sx = 0, sy = 0, cnt = 0, k, off, a, t, x;
+      var d = imgData.data, n = inkOff.length, k, off, a, t, x;
       for (k = 0; k < n; k++) {
         off = inkOff[k]; a = inkA[k]; t = inkT[k];
         if (t <= p) {
           x = (off >> 2) % W;
           d[off] = colR[x]; d[off + 1] = colG[x]; d[off + 2] = colB[x]; d[off + 3] = a;
-          if (t > bandLo && a > 40) { sx += x; sy += ((off >> 2) / W) | 0; cnt++; }
         } else {
           d[off] = 255; d[off + 1] = 255; d[off + 2] = 255;   // 未写到：极淡的白幽灵（全貌提示）
           d[off + 3] = a > 12 ? (a * 0.12) | 0 : 0;
         }
       }
       ctx.putImageData(imgData, 0, 0);
-      if (cnt) pen(sx / cnt, sy / cnt, p);
-      else pen(0, 0, 0, p);
+      pen(p);
     }
 
-    // 笔尖：按"正在写"像素的质心定位（设备像素 → CSS 像素），朝向前进方向
-    function pen(sx, sy, p) {
-      if (!sx && !sy) { if (penOn) { penOn = false; penEl.style.opacity = "0"; } return; }
-      if (p >= 1) { if (penOn) { penOn = false; penEl.style.opacity = "0"; } return; }
-      var cx = sx / dpr, cy = sy / dpr, dx, dy;
+    // 笔尖：直接沿"书写轨迹"走（轨迹自带笔顺），进度按弧长定位（设备像素 → CSS 像素）；
+    //       朝向取前后各 2 个轨迹点的方向；提笔空隙处把笔尖藏起来（别让它横滑过去）。
+    function pen(p) {
+      if (p <= 0 || p >= 1 || trkN < 2) { if (penOn) { penOn = false; penEl.style.opacity = "0"; } return; }
+      var target = p * trkL, idx = 0;
+      while (idx < trkN - 1 && trkS[idx + 1] <= target) idx++;
+      if (trkPen[idx]) {                              // 落在提笔空隙里：抬笔状态
+        if (penOn) { penOn = false; penEl.style.opacity = "0"; }
+        penInit = false;
+        return;
+      }
+      var xa = trkX[idx], ya = trkY[idx];
+      var i0 = idx > 2 ? idx - 2 : 0, i1 = idx + 2 < trkN ? idx + 2 : trkN - 1;
+      var dxk = trkX[i1] - trkX[i0], dyk = trkY[i1] - trkY[i0];
+      var cx = xa / dpr, cy = ya / dpr;
       if (!penInit) { penX = cx; penY = cy; penInit = true; }
-      var nx = penX + (cx - penX) * 0.45;   // 平滑：多笔画同时推进时不跳
-      var ny = penY + (cy - penY) * 0.45;
-      dx = nx - penX; dy = ny - penY;
-      if (Math.abs(dx) + Math.abs(dy) > 0.5) penAng = Math.atan2(dy, dx) * 180 / Math.PI;
-      penX = nx; penY = ny;
+      penX = penX + (cx - penX) * 0.5;
+      penY = penY + (cy - penY) * 0.5;
+      if (Math.abs(dxk) + Math.abs(dyk) > 0.5) penAng = Math.atan2(dyk, dxk) * 180 / Math.PI;
       penEl.style.left = penX.toFixed(1) + "px";
       penEl.style.top = penY.toFixed(1) + "px";
       penEl.style.transform = "rotate(" + penAng.toFixed(1) + "deg)";
@@ -522,9 +557,10 @@
     }
 
     function play() {
-      if (started || !ready) return;
+      if (!ready || playing) return;
+      playing = true;
       started = true;
-      window.removeEventListener("scroll", check);
+      if (!LOOP) window.removeEventListener("scroll", check);
       var t0 = null;
       function frame(now) {
         if (t0 === null) t0 = now;
@@ -532,6 +568,10 @@
         if (p > 1) p = 1;
         render(p * p * (3 - 2 * p));  // smoothstep：起笔轻 → 行笔稳 → 收笔缓
         if (p < 1) requestAnimationFrame(frame);
+        else {
+          playing = false;
+          if (LOOP) window.setTimeout(function () { render(0); penInit = false; play(); }, 900);
+        }
       }
       requestAnimationFrame(frame);
     }
@@ -564,6 +604,11 @@
       render(0);
       window.addEventListener("scroll", check, { passive: true });
       window.addEventListener("resize", onResize, { passive: true });
+      // 点一下单词 = 重播（评审时不用反复刷新；?replay=1 则是自动循环）
+      wordEl.addEventListener("click", function () {
+        if (playing) return;
+        render(0); penInit = false; play();
+      });
       check();
       window.setTimeout(check, 400);   // 兜底：直接落在本屏 / 锚点跳转
     }
