@@ -152,6 +152,9 @@ artifacts/
   ⚠️ **别用 `--virtual-time-budget` 测 CSS 过渡**（会读到卡在起始值的假象），也别指望 `--dump-dom` 能拿到 stdout（Edge 是 detached 启动的）。
 - **环境注意**：本机 **`node` 不可用**；`python` 可用（3.14.3）但**没有 `PIL`/Pillow** → 图像处理一律走 PowerShell `System.Drawing`。
   ⚠️ **PowerShell 5.1 按 ANSI 读取 `.ps1`**：脚本里写中文会乱码报错，**只用 ASCII 注释**。
+  ⚠️ **PowerShell 变量名大小写不敏感**：在取证脚本里把"最大亮度"写成 `$x1`，会**直接覆盖参数 `$X1`（右边界）**
+  → 循环瞬间退出、统计全 0，现象极像"机制完全没生效"。**避免用 `$x1/$y1/$n2` 这类与参数同名的局部变量**（改 `$hi1/$lo1`）。
+  ⚠️ 同一个脚本里 `function` 返回 hashtable 再取属性，本机 5.1 曾拿到空值 → **取证脚本一律完全内联**，比调函数稳。
   截图用系统 Edge 无头模式（`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`）。
 - **Edge 无头截图三坑**（否则会拿到"假的成功截图"）：① 同一 `--user-data-dir` 会命中缓存 → **每次换唯一 profile**；
   ② 截图**异步写盘**，进程退出时文件可能还是旧的 → **先删目标文件再轮询等新文件**；③ `Start-Process -ArgumentList` 不给含空格路径加引号 → 直接用 `& $edge … --screenshot="$out"`。
@@ -161,8 +164,8 @@ artifacts/
   （阈值 1.5，画面固有抖动噪声约 0.9）。移动端加 `&w=390&h=844`。
   ⚠️ 这类问题**用静态单屏截图永远查不出来**，必须真实时间 + 把接缝滚进视口。
 - **⚠️「改了却看不见」→ 先怀疑样式表缓存**：浏览器对 `v2-style.css` 走 HTTP 缓存，而加在**页面 URL 上的 `?v=xxx` 只能刷新 HTML，刷不到 CSS**。
-  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=10`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
-  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=10"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
+  因此 `v2-index.html` 的 `<link rel="stylesheet">` 与 `<script>` 一律**带版本号**（当前 `?v=12`）；**每次改 CSS/JS 后必须把版本号 +1**，再让用户重新打开页面。
+  排查顺序：① 版本号是否已 +1 → ② `Invoke-WebRequest "http://127.0.0.1:8123/v2-web/v2-style.css?v=12"` 确认服务端返回的是新内容 → ③ 再做像素级测量。
   💡 想确认探针拿到的是**新 JS**，不必非升 `?v`：让新旧算法在小数位上不同（如照片墙 opacity 保留 3 位），看数字指纹即可（`http.server` 带 `Last-Modified`，文件 mtime 变了自然会取新的）。
 - **⚠️「写了却看不见」不都是缓存问题 → 还要查选择器是否真的匹配**：01 关于右栏空白就是 `reveal` 写成了**裸属性**
   （`<div class="about-info" data-stagger reveal>`），`.reveal` 压根匹配不到 → IntersectionObserver 不观察 → `[data-stagger].is-visible > *` 的揭示规则永不生效 → 子项永久 `opacity:0`。
@@ -194,6 +197,7 @@ artifacts/
   → 用 `@media (min-width:761px){ #id.section{ padding-bottom:72px } }` 单独收（实测面板 555 → 499、空白 128 → 72）。
 - **探针 `psel` 里含 `#` 必须编码成 `%23`**（否则被当 URL fragment → 选择器残缺 → 抛 `not a valid selector`）；
   `psel` 走 `querySelectorAll`，**作用于整篇文档、与滚动位置无关** → 可用逗号并列一次取多个板块的元素。
+  例（第二页手写单词改为 canvas 后）：`psel=%23wordCanvas,%23aboutScreenWord,%23wordPen`（旧的 `#wordInkText` / `#wordPen`(svg) 等已不存在）。
 - **每批 probe 前重启 `probe_server.py`**：它**约 150s 未收到报告就自退**（残留或已退出时不重启会出现 "REPORT MISSING" 假象）；
   报告要**轮询等**（`Start-Sleep 3` 常常不够）；探针那次运行自带的截图是初始态（y=0），要看画面必须另跑普通截图。
 - **`getBoundingClientRect()` 含 `.reveal` 的 `translateY(28px)`**：元素未揭示时读到的 `top` 比真实值大 28px（别误判成布局错位）。
@@ -201,9 +205,23 @@ artifacts/
   （桌面 2 列时靠兄弟元素把行撑高才有效）。想让手机端也"钉住"就把 `≤760px` 的容器由 `grid` 改 `block`（用户已确认**保持现状**）。
 - **"手写感 + 边缘平滑"不要靠坐标描摹**：拿网格化坐标写 SVG 路径去描一整个单词，曲线**段间切线不连续** →
   放大后必然是一串多边形折角（v2 第二页"弯曲处有棱角"的真因，加大字号只会更糟）。正解是**用花体字体渲染字形**
-  （边缘由字形轮廓决定，天然平滑）+ 遮罩推进制造"写出"过程。字体要能随项目分发就用 **SIL OFL**（本项目 Pacifico，
+  （边缘由字形轮廓决定，天然平滑）+ 推进遮罩制造"写出"过程。字体要能随项目分发就用 **SIL OFL**（本项目 Pacifico，
   `v2-web/assets/fonts/pacifico-latin.woff2` 32KB + `Pacifico-OFL.txt` 许可原文同放）；`@font-face` 加 `font-display: block`，
   并**等 `document.fonts.load('400 150px "Pacifico"')` 就绪后再量尺寸**（否则量到后备字体，整块缩放全错）。
+- **"写出感"必须是笔尖沿笔画走，不能是水平横扫遮罩**（用户明确否决了横扫："不要这种从左向右填充的感觉"）：
+  横扫遮罩无论多圆头，观感都是"横向擦除"。正确做法是**在字形像素上算沿笔画的测地距离场**
+  （`getImageData` 取 alpha 蒙版 → 8 邻接 flood fill 拆连通块 → 每块取"最左列最上像素"为起笔点 →
+  块内 8 邻接 Dijkstra，直边 1 / 斜边 1.414 → 距离即"笔尖走过的路程" → 逐帧 `t ≤ p` 上色、`t > p` 留幽灵），
+  笔尖位置用"同一帧刚上色像素质心"反馈，才**始终贴在书写前沿**。
+  ⚠️ **多连通块必须串行分配时间窗**（按起笔点 x 排序、时长 ∝ 路径长度、窗口不重叠）；
+  若给各块各自"按 x 错开起笔 + 固定时长"，块的**时间窗会重叠** → 两处同时书写 → 笔尖质心跳到别的字母上（第一版就是这个 bug）。
+- **怎么证明"是沿笔画写"而不是"横扫"（数字证据）**：`.deepworks/tmp/wordstat.ps1`
+  —— 以**定格帧的饱和像素**作字形蒙版，取**中途帧**逐列比对覆盖率：
+  ① 先做 **±4px 对齐搜索**（best dx 应落在 0，且明显压过 ±1，否则说明两帧错位）；
+  ② 再看**部分着色的列占比**（横扫填充几乎只会是 0% 或 100%，本次实测 **196/537 = 36.5%**）；
+  ③ 加 **±1px 容差**后数字若几乎不变，则"部分着色"不是边缘对不齐的假象（本次 27,387 → 27,490）；
+  ④ 字形之外的多余饱和像素即**笔尖**，其 x 应紧贴"最右着色列"（本次笔尖中心 695.5 vs 前沿 745）。
+  该脚本用 PowerShell `System.Drawing` 读位图（本机无 PIL，`node` 也不可用），中间帧必须用 `-RealTime` 抓。
 - **SVG 呈现属性会被 CSS 类规则覆盖**：`el.setAttribute("font-size", 250)` 干不过 `.word-ink-text{font-size:150px}` →
   缩放**静默失效**（探针实测字宽 424px，应约 706px）。**凡是要动态改尺寸，一律写内联 `el.style.fontSize`**；
   这类"改了没生效"要量**元素实测宽度**，别靠肉眼。
@@ -256,11 +274,18 @@ artifacts/
       改为**元素顶边越过视口 80% 才开演**（`rect.top < vh * 0.8`）+ `scroll`/`resize`/`load` 触发 + `started` 守卫 + 开演摘监听。
       实测：y=0 停留 7s 仍 `is-armed`（**无** `is-in`）→ y=4200（top=672 < 720）才 `is-in` → y=4700 已 `is-done`。
       实拍 `artifacts/screenshots/v2-journey-flyin-late.png`（飞入中）/ `v2-journey-flyin-done.png`（归位后）。详见第八次追加迭代。
-   10. **第二页手写单词改为"真字体字形 + 彩虹渐变 + 遮罩推进"**：`v2-about-data.js` 网格化**描摹路径的段间接线不连续**就是"弯曲处有棱角"的真因 →
-       改用内置 **Pacifico**（SIL OFL）渲染字形（边缘天然平滑），`linearGradient` 按实测字宽铺满七档彩虹，
-       圆头粗描边作 `<mask>` 从左向右"写出"，纸飞机笔尖 `getPointAtLength` 跟随、收笔淡出；触发按**单词顶边越过视口 60%**（absTop 1276 → ≈scrollY 736）。
-       实测：字宽 424 → **706px**（修掉"`font-size` 呈现属性被 CSS 覆盖"这个真 bug）、墨迹 **699×179**、纵向中心偏差 9px、定格帧笔尖 `op=0`、移动端字宽 335/390。
-       实拍 `v2-about-word-writing.png`（书写中）/ `v2-about-word-rest.png`（定格）/ `v2-about-word-mobile.png`（移动）。详见第九次追加迭代。
+   10. **第二页手写单词改为"真字体字形 + 彩虹渐变 + 推进写出"**：`v2-about-data.js` 网格化**描摹路径的段间接线不连续**就是"弯曲处有棱角"的真因 →
+       改用内置 **Pacifico**（SIL OFL）渲染字形（边缘天然平滑），`linearGradient` 按实测字宽铺满七档彩虹；
+       触发按**单词顶边越过视口 60%**（absTop 1276 → ≈scrollY 736）。
+       实测：字宽 424 → **706px**（修掉"`font-size` 呈现属性被 CSS 覆盖"这个真 bug）、墨迹 **699×179**、纵向中心偏差 9px、移动端字宽 335/390。详见第九次追加迭代。
+       ⚠️ 该版的"写出"是**一条圆头描边从左向右横扫遮罩** → 观感是"横向填充"，**已被第十次迭代否决替换**。
+   11. **"横向填充"改为"一笔一笔写出"（沿笔画测地距离场）**：用户反馈"需要一笔连贯书写的感觉，不要从左向右填充" →
+       放弃 SVG 遮罩，改 `<canvas>` 逐像素渲染：alpha 蒙版 → 连通块 → 每块"最左列最上像素"起笔 → 块内 **Dijkstra 测地距离场**
+       （距离 ≈ 笔尖走过的路程）→ **块间串行时间窗**（按起笔点 x 排先后、时长 ∝ 路径长度、窗口不重叠）→ 逐帧 `t≤p` 上色 / `t>p` 白幽灵，
+       笔尖用"刚上色像素质心"跟随；修掉了第一版"块间时间窗重叠 → 笔尖跳到别的字母上"的 bug。
+       数字验证（`wordstat.ps1`）：定格蒙版 44,750px、中途帧已写 **61.2%**、**部分着色列 196/537 = 36.5%**（横扫只会 ~0%）、
+       对齐 dx=0 且 ±1px 容差后几乎不变（27,387 → 27,490，排除错位假象）、笔尖中心 **695.5** 紧贴前沿 745。
+       实拍 `v2-about-word-writing.png` / `v2-about-word-rest.png` / `v2-about-word-mobile.png`（三张均已换新）。详见第十次追加迭代。
 - **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
 

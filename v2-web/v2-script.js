@@ -242,89 +242,289 @@
     }
   }
 
-  /* ---------- About 简介屏：手写单词"about me"（真字体字形 + 遮罩推进写出）----------
-     旧实现是"描摹一条低精度折线路径"，曲线相接处切线不连续，放大后可见明显棱角。
-     现在改为：单词交给内置花体字体（Pacifico · SIL OFL）渲染，视觉边缘完全由字形
-     轮廓决定；再用一条圆头粗描边路径作遮罩、从左向右推进 —— 被扫过的字形即"被写出"。
-     墨迹填充为沿横向铺满的彩虹渐变（绿→黄→橙→粉→紫→蓝，参考 Apple hello 配色）。
-     截图 / 减少动效：直接完整显示 + 隐藏笔尖。
+  /* ---------- About 简介屏：手写单词"about me"（真字体字形 + 沿笔画书写）----------
+     v1 是"描摹一条折线路径"（段间切线不连续 → 放大见棱角）；上一版改成"整词水平
+     扫描遮罩"，边缘是平滑了，但观感是"从左向右被填充"，不像在写字。
+     本版保留字形（仍由内置花体字体 Pacifico · SIL OFL 渲染 → 边缘天然平滑）+ 彩虹，
+     只改"墨迹何时出现"的判据，改成**沿笔画的测地距离**：
+       ① 把字形画到画布、取 alpha 得到墨迹蒙版；
+       ② 8 邻接找出每个连通块，取该块最左列最上的墨迹像素作"起笔点"（笔画起始端）；
+       ③ 以起笔点为源、只在墨迹内部做 Dijkstra（8 邻接 + 欧氏权重）= 测地距离场：
+          距离场沿笔画推进，而不是横扫 —— 单连通的花体连笔字会按**笔顺**依次经过
+          每一段笔画（弧长优先），所以读起来就是"一笔连贯写出来"；
+       ④ 块与块按起笔点 x 从左到右排先后，书写窗口互不重叠、时长与笔画长度成正比
+          （任何时刻只有一处笔尖，一笔一笔来；整段时间正好用完）。
+     彩虹按列取样（左绿 → 右蓝），与上一版配色一致；笔尖按当前推进点的质心定位。
+     截图 / 减少动效：直接显示完整墨迹 + 隐藏笔尖。
      触发判据与 03 足迹拼图同源：单词顶边越过视口 60% 才开演（不早播、不重播）。 */
   (function () {
-    var inkText = document.getElementById("wordInkText");
-    var ghostText = document.getElementById("wordGhostText");
-    var brush = document.getElementById("wordBrush");
+    var canvas = document.getElementById("wordCanvas");
     var penEl = document.getElementById("wordPen");
-    var gradEl = document.getElementById("wordRainbow");
-    var aboutSection = document.getElementById("about-screen");
     var wordEl = document.getElementById("aboutScreenWord");
-    if (!inkText || !ghostText || !brush || !penEl || !aboutSection || !wordEl) return;
+    if (!canvas || !penEl || !wordEl) return;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    var BOX_W = 1000, BOX_H = 260;  // 与 viewBox 一致
-    var FIT_W = 930;                // 目标字宽（左右各留一点余量给起收笔）
-    var TRIGGER = 0.6;              // 顶边越过视口 60% 才开演
+    var TEXT = "about me";
+    var RATIO = 1000 / 260;   // 画布宽高比（与旧 SVG 的 viewBox 相同 → 版面高度不变）
+    var FIT = 0.93;           // 目标字宽 / 画布宽（左右留一点余量给起收笔）
+    var TRIGGER = 0.6;        // 顶边越过视口 60% 才开演
     var DUR = 2000;
-    var brushLen = 0;
-    var started = false;
+    // 彩虹七档（与上一版 linearGradient 的 stop 完全一致）
+    var STOPS = [[0, 95, 211, 95], [0.17, 184, 227, 74], [0.34, 255, 210, 63],
+                 [0.5, 255, 155, 66], [0.66, 255, 95, 158], [0.83, 176, 107, 255],
+                 [1, 74, 168, 255]];
+    var DX = [1, -1, 0, 0, 1, 1, -1, -1];
+    var DY = [0, 0, 1, -1, 1, -1, 1, -1];
+    var DW = [1, 1, 1, 1, 1.41421356, 1.41421356, 1.41421356, 1.41421356];
 
-    // 量字 → 缩放字号填满画布 → 居中 → 定渐变区间与笔刷路径
-    function layout() {
-      var base = parseFloat(window.getComputedStyle(inkText).fontSize) || 150;
-      var b = inkText.getBBox();
-      if (!b.width || !b.height) return;
+    var W = 0, H = 0, dpr = 1;
+    var imgData = null, inkOff = null, inkA = null, inkT = null;
+    var colR = null, colG = null, colB = null;
+    var ready = false, started = false, drawn = -1;
+    var penOn = false, penInit = false, penX = 0, penY = 0, penAng = -18;
+    var resizeTimer = 0;
 
-      var fs = Math.max(40, Math.min(280, base * (FIT_W / b.width)));
-      // 必须写成内联 style：CSS 类里的 font-size 会盖掉同名的 SVG 呈现属性
-      inkText.style.fontSize = fs + "px";
-      ghostText.style.fontSize = fs + "px";
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
-      // 居中用 x/y 几何属性而非 transform：getBBox 不含元素自身 transform，避免量错
-      var nb = inkText.getBBox();
-      var nx = 500 + (BOX_W / 2 - (nb.x + nb.width / 2));
-      var ny = 150 + (BOX_H / 2 - (nb.y + nb.height / 2));
-      inkText.setAttribute("x", nx); inkText.setAttribute("y", ny);
-      ghostText.setAttribute("x", nx); ghostText.setAttribute("y", ny);
-
-      var box = inkText.getBBox();
-      if (gradEl) {
-        gradEl.setAttribute("x1", box.x.toFixed(1));
-        gradEl.setAttribute("y1", "0");
-        gradEl.setAttribute("x2", (box.x + box.width).toFixed(1));
-        gradEl.setAttribute("y2", "0");
+    // 逐列彩虹取样（横向铺满，左绿 → 右蓝）
+    function buildRainbow(w) {
+      colR = new Uint8Array(w); colG = new Uint8Array(w); colB = new Uint8Array(w);
+      for (var x = 0; x < w; x++) {
+        var u = w > 1 ? x / (w - 1) : 0, i = 0;
+        while (i < STOPS.length - 2 && u > STOPS[i + 1][0]) i++;
+        var a = STOPS[i], b = STOPS[i + 1];
+        var k = clamp((u - a[0]) / ((b[0] - a[0]) || 1), 0, 1);
+        colR[x] = Math.round(a[1] + (b[1] - a[1]) * k);
+        colG[x] = Math.round(a[2] + (b[2] - a[2]) * k);
+        colB[x] = Math.round(a[3] + (b[3] - a[3]) * k);
       }
-      // 笔刷：从字左外缘扫到右外缘，纵向走在画布中线上，带一点起伏
-      // 纵向用画布中线而非 box：box 可能是字体 em 盒（含大量升降部留白），会把它拉偏
-      var y0 = BOX_H / 2;
-      var x0 = box.x - box.width * 0.06;
-      var x1 = box.x + box.width * 1.06;
-      var amp = 14;
-      var dx = x1 - x0;
-      brush.setAttribute("d",
-        "M " + x0.toFixed(1) + " " + (y0 - amp).toFixed(1) +
-        " C " + (x0 + dx * 0.30).toFixed(1) + " " + (y0 + amp).toFixed(1) +
-        " " + (x0 + dx * 0.64).toFixed(1) + " " + (y0 - amp * 1.5).toFixed(1) +
-        " " + x1.toFixed(1) + " " + (y0 + amp * 0.5).toFixed(1));
-      brush.setAttribute("stroke-width", "260");  // 略大于画布高，保证整字高度都被覆盖
-      brushLen = brush.getTotalLength();
-      brush.style.strokeDasharray = brushLen + " " + brushLen;
     }
 
-    function render(t) {
-      if (!brushLen) return;
-      var p = t < 0 ? 0 : (t > 1 ? 1 : t);
-      brush.style.strokeDashoffset = brushLen * (1 - p);
-      var cur = brush.getPointAtLength(brushLen * p);
-      var ahead = brush.getPointAtLength(Math.min(brushLen, brushLen * p + 3));
-      var ang = Math.atan2(ahead.y - cur.y, ahead.x - cur.x) * 180 / Math.PI;
-      penEl.setAttribute("transform",
-        "translate(" + cur.x.toFixed(1) + " " + cur.y.toFixed(1) + ") rotate(" + ang.toFixed(1) + ")");
-      penEl.style.opacity = p >= 1 ? "0" : "1";
+    /* ---- Dijkstra 用的简易二叉堆（惰性删除：允许重复入堆，出堆时用 done 去重）---- */
+    var hCap = 4096, hN = 0, hD = new Float32Array(hCap), hI = new Int32Array(hCap), hTop = 0;
+    function hPush(d, i) {
+      if (hN === hCap) {
+        hCap *= 2;
+        var nd = new Float32Array(hCap); nd.set(hD); hD = nd;
+        var ni = new Int32Array(hCap); ni.set(hI); hI = ni;
+      }
+      var k = hN++; hD[k] = d; hI[k] = i;
+      while (k > 0) {
+        var par = (k - 1) >> 1;
+        if (hD[par] <= hD[k]) break;
+        var td = hD[par]; hD[par] = hD[k]; hD[k] = td;
+        var ti = hI[par]; hI[par] = hI[k]; hI[k] = ti;
+        k = par;
+      }
+    }
+    function hPop() {
+      hTop = hD[0];
+      var top = hI[0];
+      hN--;
+      hD[0] = hD[hN]; hI[0] = hI[hN];
+      var k = 0;
+      for (;;) {
+        var l = 2 * k + 1, rr = l + 1, s = k;
+        if (l < hN && hD[l] < hD[s]) s = l;
+        if (rr < hN && hD[rr] < hD[s]) s = rr;
+        if (s === k) break;
+        var a = hD[s]; hD[s] = hD[k]; hD[k] = a;
+        var b = hI[s]; hI[s] = hI[k]; hI[k] = b;
+        k = s;
+      }
+      return top;
+    }
+
+    /* ---- 一次性构建：量字 → 绘制 → 墨迹蒙版 → 连通块 + 测地距离场 → 时间表 ---- */
+    function build() {
+      var cssW = wordEl.clientWidth;
+      if (!cssW) return;
+      ready = false;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.max(8, Math.round(cssW * dpr));
+      H = Math.max(4, Math.round(W / RATIO));
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.height = (H / dpr) + "px";
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // 量字：迭代两次，让墨迹宽 ≈ FIT × 画布宽
+      // （actualBoundingBox 只含墨迹，不含 em 盒的升降部留白，比 getBBox 准）
+      var fs = 150, m = null, pass;
+      for (pass = 0; pass < 2; pass++) {
+        ctx.font = "400 " + fs + "px Pacifico, cursive";
+        m = ctx.measureText(TEXT);
+        var iw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+        if (!iw) iw = m.width || 1;
+        fs = clamp(fs * (FIT * W) / iw, 10, 900);
+      }
+      ctx.font = "400 " + fs + "px Pacifico, cursive";
+      m = ctx.measureText(TEXT);
+
+      // 居中绘制：纵向按墨迹的升/降部居中（避开 em 盒留白造成的偏移）
+      var asc = m.actualBoundingBoxAscent || 0;
+      var desc = m.actualBoundingBoxDescent || 0;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "#fff";
+      ctx.fillText(TEXT, W / 2, (H - (asc + desc)) / 2 + asc);
+
+      imgData = ctx.getImageData(0, 0, W, H);
+      var d = imgData.data, N = W * H, p, o;
+
+      // 墨迹蒙版（alpha > 8；抗锯齿边缘一并算作墨迹，避免出现毛边）
+      var mask = new Uint8Array(N), inkN = 0;
+      for (p = 0, o = 3; p < N; p++, o += 4) if (d[o] > 8) { mask[p] = 1; inkN++; }
+      if (!inkN) return;
+
+      var timeOf = new Float32Array(N);
+      var cid = new Uint16Array(N);
+      var seen = new Uint8Array(N);
+      var done = new Uint8Array(N);
+      var stack = new Int32Array(inkN);
+      var comp = new Int32Array(inkN);
+      var cLen = [], cMinX = [];     // 每块的笔画长度 / 起笔点 x
+      var K = 0, k, k2, q, qx, qy;
+
+      for (var p0 = 0; p0 < N; p0++) {
+        if (!mask[p0] || seen[p0]) continue;
+
+        // ① 洪水填充（8 邻接）取出一个连通块
+        var sp = 0, cn = 0, minX = p0 % W;
+        stack[sp++] = p0; seen[p0] = 1;
+        while (sp > 0) {
+          q = stack[--sp];
+          qx = q % W; qy = (q - qx) / W;
+          comp[cn++] = q;
+          if (qx < minX) minX = qx;
+          for (k = 0; k < 8; k++) {
+            var ex = qx + DX[k], ey = qy + DY[k];
+            if (ex < 0 || ey < 0 || ex >= W || ey >= H) continue;
+            var eq = ey * W + ex;
+            if (mask[eq] && !seen[eq]) { seen[eq] = 1; stack[sp++] = eq; }
+          }
+        }
+
+        // ② 起笔点 = 该块最左列最上的墨迹像素（笔画起始端，自上而下入笔）
+        var seed = -1, bestY = 1e9, c, cx, cy;
+        for (c = 0; c < cn; c++) {
+          q = comp[c]; cx = q % W; cy = (q - cx) / W;
+          if (cx === minX && cy < bestY) { bestY = cy; seed = q; }
+        }
+        if (seed < 0) continue;
+
+        // ③ 块内测地距离场：只在墨迹内部扩散，所以距离 ≈ 笔尖沿笔画走过的路程
+        //    （不同连通块互不 8 邻接，故 done 可跨块复用）
+        var id = K++;
+        hN = 0;
+        hPush(0, seed);
+        var dmax = 0;
+        while (hN > 0) {
+          var u = hPop(), ud = hTop;
+          if (done[u]) continue;
+          done[u] = 1;
+          timeOf[u] = ud;
+          if (ud > dmax) dmax = ud;
+          var ux = u % W, uy = (u - ux) / W;
+          for (k2 = 0; k2 < 8; k2++) {
+            var vx = ux + DX[k2], vy = uy + DY[k2];
+            if (vx < 0 || vy < 0 || vx >= W || vy >= H) continue;
+            var v = vy * W + vx;
+            if (!mask[v] || done[v]) continue;
+            hPush(ud + DW[k2], v);
+          }
+        }
+
+        // ④ 记下这一块：笔画长度（=最大测地距离）与起笔点 x，后面用来排先后、分时长
+        cLen[id] = dmax;
+        cMinX[id] = minX;
+        for (c = 0; c < cn; c++) cid[comp[c]] = id;
+      }
+      if (!K) return;
+
+      // ⑤ 分配书写时间：按起笔点从左到右定先后，每块时长与其笔画长度成正比。
+      //    窗口互不重叠 → 任何时刻只有一处笔尖，像手写一样一笔一笔来（不齐头并进）。
+      //    长度权重里掺一半"均分"，免得极短的块（字母上的点之类）来不及看清。
+      var order = [], i;
+      for (i = 0; i < K; i++) order.push(i);
+      order.sort(function (a, b) { return cMinX[a] - cMinX[b]; });
+      var totalLen = 0;
+      for (i = 0; i < K; i++) totalLen += cLen[order[i]];
+      if (totalLen <= 0) return;
+      var cOff = [], cDur = [], acc = 0;
+      for (i = 0; i < K; i++) {
+        var bid = order[i], avg = totalLen / K;
+        cDur[bid] = (0.5 * cLen[bid] + 0.5 * avg) / totalLen;
+        cOff[bid] = acc;
+        acc += cDur[bid];
+      }
+
+      // ⑥ 压平成紧凑数组，逐帧只遍历墨迹像素；时间场已覆盖 [0,1] → 动画正好写完
+      inkOff = new Int32Array(inkN);
+      inkA = new Uint8Array(inkN);
+      inkT = new Float32Array(inkN);
+      var n2 = 0;
+      for (var p3 = 0; p3 < N; p3++) {
+        if (!mask[p3]) continue;
+        var ci = cid[p3], den = cLen[ci];
+        inkOff[n2] = p3 * 4;
+        inkA[n2] = d[p3 * 4 + 3];
+        inkT[n2] = cOff[ci] + (den > 1e-4 ? (timeOf[p3] / den) * cDur[ci] : cDur[ci]);
+        n2++;
+      }
+      buildRainbow(W);
+      drawn = -1;
+      ready = true;
+    }
+
+    function render(p) {
+      if (!ready || !imgData) return;
+      p = clamp(p, 0, 1);
+      if (p === drawn) return;
+      drawn = p;
+      var d = imgData.data, n = inkOff.length;
+      var bandLo = p - 0.04;          // 同一帧内"正在写"的像素带
+      var sx = 0, sy = 0, cnt = 0, k, off, a, t, x;
+      for (k = 0; k < n; k++) {
+        off = inkOff[k]; a = inkA[k]; t = inkT[k];
+        if (t <= p) {
+          x = (off >> 2) % W;
+          d[off] = colR[x]; d[off + 1] = colG[x]; d[off + 2] = colB[x]; d[off + 3] = a;
+          if (t > bandLo && a > 40) { sx += x; sy += ((off >> 2) / W) | 0; cnt++; }
+        } else {
+          d[off] = 255; d[off + 1] = 255; d[off + 2] = 255;   // 未写到：极淡的白幽灵（全貌提示）
+          d[off + 3] = a > 12 ? (a * 0.12) | 0 : 0;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      if (cnt) pen(sx / cnt, sy / cnt, p);
+      else pen(0, 0, 0, p);
+    }
+
+    // 笔尖：按"正在写"像素的质心定位（设备像素 → CSS 像素），朝向前进方向
+    function pen(sx, sy, p) {
+      if (!sx && !sy) { if (penOn) { penOn = false; penEl.style.opacity = "0"; } return; }
+      if (p >= 1) { if (penOn) { penOn = false; penEl.style.opacity = "0"; } return; }
+      var cx = sx / dpr, cy = sy / dpr, dx, dy;
+      if (!penInit) { penX = cx; penY = cy; penInit = true; }
+      var nx = penX + (cx - penX) * 0.45;   // 平滑：多笔画同时推进时不跳
+      var ny = penY + (cy - penY) * 0.45;
+      dx = nx - penX; dy = ny - penY;
+      if (Math.abs(dx) + Math.abs(dy) > 0.5) penAng = Math.atan2(dy, dx) * 180 / Math.PI;
+      penX = nx; penY = ny;
+      penEl.style.left = penX.toFixed(1) + "px";
+      penEl.style.top = penY.toFixed(1) + "px";
+      penEl.style.transform = "rotate(" + penAng.toFixed(1) + "deg)";
+      if (!penOn) { penOn = true; penEl.style.opacity = "1"; }
     }
 
     function play() {
-      if (started) return;
+      if (started || !ready) return;
       started = true;
       window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
       var t0 = null;
       function frame(now) {
         if (t0 === null) t0 = now;
@@ -343,17 +543,27 @@
     }
     function check() { if (visible()) play(); }
 
+    function onResize() {
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function () {
+        build();
+        if (!ready) return;
+        if (started || isShot || reduceMotion) render(1);
+        else { render(0); check(); }
+      }, 160);
+    }
+
     function init() {
-      layout();
-      if (!brushLen) return;
-      if (isShot || reduceMotion) {
+      build();
+      if (!ready) return;
+      if (isShot || reduceMotion) {           // 截图 / 减少动效：直接完整显示
         render(1);
-        penEl.style.opacity = 0;
+        penEl.style.opacity = "0";
         return;
       }
       render(0);
       window.addEventListener("scroll", check, { passive: true });
-      window.addEventListener("resize", check, { passive: true });
+      window.addEventListener("resize", onResize, { passive: true });
       check();
       window.setTimeout(check, 400);   // 兜底：直接落在本屏 / 锚点跳转
     }

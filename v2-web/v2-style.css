@@ -536,40 +536,39 @@ b {
 .about-screen__word {
   width: min(100%, 760px);
   margin: 0 auto;
+  position: relative;   /* 笔尖绝对定位的参照 */
 }
 
-.word-svg {
+/* 单词画布：字形由字体轮廓渲染（边缘天然平滑），墨迹由 JS 逐帧绘制；
+   像素尺寸 = 容器宽 × DPR（上限 2），高宽比 260/1000 与旧 SVG 一致 → 版面高度不变 */
+.word-canvas {
   width: 100%;
+  height: auto;
   display: block;
-  overflow: visible;
 }
 
-/* 单词两层：幽灵淡线（全貌提示）+ 彩虹墨迹（被遮罩从左向右逐段揭示）
-   字号由 JS 按实际字宽缩放填满，故此处只给一个基准值 */
-.word-ghost-text,
-.word-ink-text {
-  font-family: "Pacifico", "Brush Script MT", "Segoe Script", cursive;
-  font-weight: 400;
-  font-size: 150px;
-}
-
-.word-ghost-text {
-  fill: rgba(255, 255, 255, 0.1);
-}
-
-/* 笔刷：圆头粗描边，作遮罩把墨迹"写"出来（白色=显示，粗细由 JS 按字高设定） */
-.word-brush {
-  fill: none;
-  stroke: #fff;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* 笔尖：小纸飞机，跟随推进点并朝向前进方向 */
+/* 笔尖：小纸飞机，绝对定位在"当前笔画推进点"，按前进方向旋转（JS 设 left/top/transform） */
 .word-pen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;   /* 以自身中心对齐推进点 */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.word-pen svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.word-pen path {
   fill: #ffb347;
   filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.85));
-  transition: opacity 0.35s ease;
 }
 
 .about-screen__line {
@@ -606,10 +605,6 @@ b {
 /* 截图 / 预览模式：直接显示完整墨迹，隐藏笔尖 */
 html.shot .about-screen {
   min-height: 60vh;
-}
-html.shot .word-brush {
-  stroke-dasharray: none;
-  stroke-dashoffset: 0;
 }
 html.shot .word-pen {
   opacity: 0;
@@ -1596,12 +1591,9 @@ html.shot .write-char {
     filter: blur(0);
     animation: none;
   }
-  .word-brush {
-    stroke-dasharray: none;
-    stroke-dashoffset: 0;
-  }
   .word-pen {
     opacity: 0;
+    transition: none;
   }
   * {
     animation-duration: 0.001ms !important;
