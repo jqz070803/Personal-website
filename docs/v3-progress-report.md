@@ -176,3 +176,21 @@
 4. **[可选] 失败提示里的错误码**：当前失败文案会把 `PGRST204` 这类技术码直接显示给访客（排障期故意保留）；
    若觉得太技术化，可改为统一「稍后再试」，把错误码只写进 `console`。
 5. 抖音 / 视频号 链接（v2 遗留）仍未拿到。
+
+---
+
+## 6. 交付 / 上线（2026-09-17）
+
+- **代码仓库**：<https://github.com/jqz070803/Personal-website>（public），分支 `main`（本地由 `master` 改名而来），
+  tag `v1` / `v2` / `v3` 已全部推送。
+- **在线地址**：**<https://jqz070803.github.io/Personal-website/>**
+- **部署方式**：GitHub Actions（`.github/workflows/pages.yml`）——推送 `main` 即自动发布，
+  它把 `v3-web/` **整个目录**当作站点根（`v3-index.html` 改名为 `index.html`）。
+  ⇒ **以后改完 v3 页面只要 `git push`，线上约 1 分钟自动更新**，不需要手动上传。
+- **前置条件（一次性）**：仓库 Settings → Pages → Source 必须选 `GitHub Actions`，
+  否则工作流会卡在「配置 Pages」那一步失败。
+- **上线验收**：线上首页 `200` / 70814 B（与本地 `v3-index.html` 字节数一致）、`v3-style.css` `200` / 50394 B、
+  `v3-script.js` `200` / 47264 B、`assets/hero/hero-loop.mp4` `200` / 8.5 MB；
+  截图证据 `artifacts/screenshots/v3-live-github-pages-desktop.png`（导航 8 项 / 首屏视频 / 两个按钮 / 山峦渲染正常）。
+  → 反馈板块的提交链路在线上同样可用（同一份 JS + 同一个 Supabase 表）。
+- 接入过程与踩坑（无关历史合并、`github.com` 连接不稳、GCM 非交互不弹窗）见 `docs/project-continuity.md` **§6.6**。

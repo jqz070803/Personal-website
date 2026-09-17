@@ -348,6 +348,10 @@ docs/
 - **分支**：远端默认分支 **`main`**；本地仓库分支已由 `master` **重命名为 `main`** 并跟踪 `origin/main`。
   ⚠️ 本文档其它地方若还写着"分支 `master`"，一律以 `main` 为准。
 - **在线地址**：**`https://jqz070803.github.io/Personal-website/`**
+- **首次部署已验证（2026-09-17）**：线上首页 `200`（**70814 B，与本地 `v3-web/v3-index.html` 字节数一致**）、
+  `v3-style.css` `200`（50394 B）、`v3-script.js` `200`（47264 B）、`assets/hero/hero-loop.mp4` `200`（8.5 MB）。
+  线上实拍证据：`artifacts/screenshots/v3-live-github-pages-desktop.png`（1440×900，导航 8 项 / 首屏视频 / 两个按钮 / 山峦均正常渲染）。
+  ⇒ 线上与本地是同一份文件，**相对路径在子路径下工作正常**。
 - **部署方式**：GitHub Actions，配置文件 `.github/workflows/pages.yml`，**推送到 `main` 自动触发**（约 1 分钟生效）。
   流程：检出仓库 → 把 `v3-web/` **整个目录**复制成站点根（并把 `v3-index.html` 改名为 `index.html`）→ 上传 artifact → 发布。
   ⇒ **以后每次更新 v3 的页面文件，只要 `git push`，线上就会自动更新**（无需手动上传）。
