@@ -37,6 +37,11 @@
 > ⚠️ **两套编号不要混**：**课程阶段**用 V1～V4（大写 V + 大纲顺序），**文件版本**用 v1/v2/v3…（小写 v + 目录名）。
 > 目前二者一一对应：**课程 V2 的产出 = 文件版本 v2**（「学业」板块与视差背景同属 v2，用户明确要求**不为视觉打磨单独新开版本号**）。
 
+> **GitHub 交付（课程评分项之一）已完成（2026-09-17）**：代码已推到**公开**仓库
+> `https://github.com/jqz070803/Personal-website`，并用 GitHub Pages 上线到
+> **`https://jqz070803.github.io/Personal-website/`** —— 任何人点开链接即可浏览，反馈功能也能直接用。
+> 接入过程、部署机制与踩过的坑见 **§6.6**。
+
 ## 4. 版本命名约定（重要）
 - **所有本版本生成的文件，文件名都以 `v1` 开头**（如 `v1-index.html`、`v1-style.css`、`v1-script.js`、`v1-progress-report.md`）。
 - **下一次迭代（v2 开新对话）时，所有文件改为 `v2` 开头**，依此类推到 v3、v4。
@@ -338,6 +343,29 @@ docs/
 - **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 
+## 6.6 托管 / 在线地址（GitHub Pages）★ 2026-09-17 上线
+- **远程仓库**：`https://github.com/jqz070803/Personal-website`（**public**），远程名 `origin`。
+- **分支**：远端默认分支 **`main`**；本地仓库分支已由 `master` **重命名为 `main`** 并跟踪 `origin/main`。
+  ⚠️ 本文档其它地方若还写着"分支 `master`"，一律以 `main` 为准。
+- **在线地址**：**`https://jqz070803.github.io/Personal-website/`**
+- **部署方式**：GitHub Actions，配置文件 `.github/workflows/pages.yml`，**推送到 `main` 自动触发**（约 1 分钟生效）。
+  流程：检出仓库 → 把 `v3-web/` **整个目录**复制成站点根（并把 `v3-index.html` 改名为 `index.html`）→ 上传 artifact → 发布。
+  ⇒ **以后每次更新 v3 的页面文件，只要 `git push`，线上就会自动更新**（无需手动上传）。
+- **⚠️ 一次性前置条件**：仓库 Settings → Pages → Build and deployment → **Source 必须选 `GitHub Actions`**。
+  不设这个，工作流会卡在「配置 Pages」那步失败（`GITHUB_TOKEN` 没有开启 Pages 的权限，`enablement: true` 也救不了）。
+- **首次接入踩的坑（已解决，供下次参考）**：
+  1. 远端 `main` 上有 GitHub 自动生成的 `README.md / LICENSE / .gitignore`，与本地是**无关历史** →
+     用 `git merge --allow-unrelated-histories origin/main` 合并；只有 `.gitignore` 冲突，已手工合并为"本项目规则 + GitHub 的 Node 模板"。
+  2. `github.com` 在本机**时通时不通**（实测一次 20s 超时、一次 200/2.1s）；而 `api.github.com` / `codeload.github.com` 一直正常。
+     ⇒ **push 失败先重试**，不要急着改代码或改配置。系统里有个本地代理 `127.0.0.1:10808`，但 `ProxyEnable = 0`（未启用），git 也没配代理。
+  3. 推送凭据走 Git Credential Manager（`credential.helper=manager`）。在**非交互终端**里 GCM 默认不肯弹窗
+     （报 `could not read Username / failed to execute prompt script`）⇒ 前面补 `$env:GCM_INTERACTIVE = "always"` 再 push 即可。
+- **页面路径检查结论**：`v3-index.html` / `v3-style.css` 里**没有绝对路径**（无 `src="/…"`、无 `url(/…)`），
+  所以放在 `/<仓库名>/` 子路径下访问完全正常。
+- **`.gitignore` 已扩充**：新增忽略 `.opencode/`、`opencode.jsonc`、`outputs/`、`.deepworks/`、
+  根目录的 `/*.mp4`、`/微信图片_*`、`/照片展示/`、`/网页截图/`。
+  （`v3-web/assets/hero/hero-loop.mp4` 是**已跟踪**文件，不受 `/*.mp4` 影响。）
+
 ## 7. 待办 / 下一步
 1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
    - 换图/调裁切：改 `.deepworks/tmp/resize-photos.ps1` 的 `$map` 重新生成，再调 `v2-style.css` 里对应 `.ms-tile--mN` 的 `--pos`。
@@ -354,8 +382,10 @@ docs/
 2. **社交媒体链接**：B站 已是真实链接；抖音 / 视频号 主页链接待补 → 已按用户要求做成**不可点卡片 + 「筹备中」标注**
    （`div.social-card.social-card--soon`，不再弹 alert）。拿到链接后：把 `div` 换回 `<a href="…">`、去掉 `social-card--soon`、把「筹备中」换回 `→`。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
-4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2` / `v3`。
-   - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
+4. **[已完成] Git 存档点（后悔药）**：仓库已在项目根初始化，分支 **`main`**（原 `master`，接入远端时已改名），已有 tag `v1` / `v2` / `v3`。
+   已接入远程 `origin` = `https://github.com/jqz070803/Personal-website` 并全部推送，**线上站点已上线**（见 §6.6）。
+   - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"` + **`git push`**
+     （push 会自动触发线上重新部署，约 1 分钟后线上就是最新的）。
 5. **[已完成] 课程 V3 的 Feedback 部分**：反馈板块已上线入库（`v3-web/`，见 §5 / §6.5）。
    用户已执行 `v3-web/supabase-setup.sql`（补 `name` 列 + RLS + 清空测试数据）并确认页面提交成功，已打 tag `v3`。
    → **仍未开始：课程 V3 的 Dashboard（数据看板）部分**，请在 Supabase 控制台里做（Table Editor / 图表 / SQL 报表）；
@@ -369,6 +399,11 @@ docs/
 
 ## 8. 已配置的环境
 - **git**：已通过 winget 安装（2.55.0），仓库已在项目根目录初始化；配置了 user.name / user.email。
+  - 远程 `origin` = `https://github.com/jqz070803/Personal-website`（public），分支 **`main`**（原 `master` 已改名）；`gh` CLI **未安装**（所以 GitHub 操作走 REST API + `curl.exe`）。
+  - 推送凭据走 Git Credential Manager；非交互终端下需先 `$env:GCM_INTERACTIVE = "always"` 才肯弹窗授权。
+  - ⚠️ 本机连 `github.com` **不稳定**（一会儿 200/2s，一会儿 20s 超时）⇒ push 失败**先重试**；
+    系统里有本地代理 `127.0.0.1:10808` 但 `ProxyEnable = 0`（未启用），git 未配代理。
+  - 完整接入过程、部署机制与踩坑记录见 **§6.6**。
 - **本地预览**：用 Python 启动 `http.server` 于端口 **8123**（项目根目录，长期沿用）。
 - **截图工具**：使用系统自带 Microsoft Edge 无头模式（headless）截图，已验证可用。
 - **node**：本机**不可用**（`node --check` 报 CommandNotFoundException），所以不要依赖 npm/构建链。
@@ -402,6 +437,7 @@ docs/
     项目根目录执行 `python -m http.server 8123`；若未运行需先启动。
   - 当前预览地址：`http://127.0.0.1:8123/<版本目录>/<版本>-index.html`
     （当前 v3 为 `http://127.0.0.1:8123/v3-web/v3-index.html`；下一版开始替换为对应版本目录）。
+  - **线上地址**（对外分享用；push 后约 1 分钟自动更新）：`https://jqz070803.github.io/Personal-website/`
 - 打开后**等待用户看过并给出反馈**，再进入下一步修改；用户确认前不要自行推进大改。
 
 ## 9. 给下一位智能体的提示
