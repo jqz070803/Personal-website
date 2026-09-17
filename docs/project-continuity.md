@@ -29,7 +29,8 @@
   以及首屏之后淡入的「太阳 + 分层细节山峦」视差背景，并把「学习日常」改写为**劳逸结合**——
   以上**全部属于文件版本 v2**）。
 - **V3** = Supabase Dashboard + Feedback（接入后端、数据看板、意见反馈）。
-  → 尚未开始；开始时归档为 **`v3-web/`**（见 §4）。
+  → **★ 进行中（2026-09-17）**：已归档为 **`v3-web/`**（见 §4）；前端「问题反馈」板块与 Supabase 写入链路已完成，
+    数据库侧只差给 `user_feedback` 表补一个 `name` 列（见 §6.5 的 v3 条目）。
 - **V4** = 数字孪生 / AI 集成（把 AI 能力真正融入页面）。
 
 > ⚠️ **两套编号不要混**：**课程阶段**用 V1～V4（大写 V + 大纲顺序），**文件版本**用 v1/v2/v3…（小写 v + 目录名）。
@@ -45,7 +46,7 @@
   | :---: | --- |
   | v1 | MVP 主页 |
   | v2 | 「学业 · 专业」整页板块 + 视差山峦背景 + 「学习日常」改写（劳逸结合） |
-  | v3（规划） | 课程 V3 的 Supabase Dashboard + Feedback |
+  | v3 | 「问题反馈」板块：姓名 / 设备 / 反馈内容，写入 Supabase `user_feedback`（课程 V3） |
 
 ## 5. 当前文件清单
 ### v1（已完成）
@@ -131,12 +132,34 @@ artifacts/
   3. 逐帧绘制：`t ≤ p` 上彩虹（按 x 铺七档渐变），`t > p` 留 12% 白幽灵层；`t` 用 `smoothstep` 走 2000ms。
   单词实体几何（桌面 1440×900）：`#aboutScreenWord` 屏幕位 `x340 w760 h198`、文档 absTop **1276** → 开演 scrollY ≈ **736**；墨迹实测 **760×198**（canvas 尺寸）、墨迹 bbox `x 32..738 / y 8..189`。
   ⚠️ 历史教训（勿回退）：**不要**用"从笔尖出发沿墨迹累加像素距离"（Dijkstra 时间场）定揭示时刻——轨迹弧长比水平距离长得多（笔1 弧长 892px 只横跨 179px），加性距离会把空间相邻、笔序很晚的墨提前染色，实测整个 "about" 被并进第一笔时间窗，观感就是"一大片横向一起亮"。
-  ⚠️ 已知取舍：字体轮廓是并集整体，参考图那种"笔画交叠半透明"无法复现（详见第九次追加迭代）。
+   ⚠️ 已知取舍：字体轮廓是并集整体，参考图那种"笔画交叠半透明"无法复现（详见第九次追加迭代）。
+### v3（进行中：「问题反馈」板块 = 课程 V3 的 Feedback）
+```
+v3-web/
+├── v3-index.html          # 由 v2 复制：导航追加「反馈」（共 8 项）、footer 改「v3 · 问题反馈」、在 #contact 之后插入 #feedback 板块（序号 09「留句话给我」）+ #fbForm（#fbName / #fbDevice / #fbContent / #fbCount / #fbSubmit / #fbStatus + 两处 #fbNameErr/#fbContentErr）；三处资源引用改 ?v=1
+├── v3-style.css           # 末尾追加 .fb* 反馈表单样式块（约 150 行，设计变量全部沿用 v2）：磨砂卡片、聚焦冷蓝发光、自绘下拉箭头、文本域 min-height 190px、≤760px 两列堆叠 + 按钮占满整行
+├── v3-script.js           # 末尾追加反馈表单 IIFE（约 220 行）：设备 UA 预选、字数 n/1000、localStorage 草稿（v3-feedback-draft）、姓名/内容校验、POST {SUPABASE_URL}/rest/v1/user_feedback（Prefer: return=minimal，body {name, device, content}）、失败按 code 提示 + 邮件兜底、lock() 防重复提交
+├── v3-about-data.js       # 与 v2 完全一致（笔顺唯一真源，未改）
+├── supabase-setup.sql     # ★ 数据库初始化脚本：补 name 列 + grant insert to anon + RLS insert 策略（幂等，可重复执行）
+├── assets/                # 与 v2 一致（journey 10 张 / hero 视频 8.1MB / about 4 张 / fonts Pacifico）
+└── tools/                 # 与 v2 一致（gen-bg-parallax.py 仍硬编码写 v2-index.html，若要在 v3 用需改路径）
+docs/
+└── v3-progress-report.md  # ★ v3 迭代进度报告（本轮）；v1 / v2 报告保留
+```
+- Supabase：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`（现有 `id/contact/device/content/created_at` + **待补 `name`**）。
+  publishable key 写在 `v3-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全边界由 RLS 负责）。
+- **实测状态（逐条验证）**：匿名 `GET ?select=*` 返回 `200 []`（可读）；匿名 `POST {device,content}` 返回 **`201`**（写入通道已打通）；
+  匿名 `POST {name,…}` 返回 `400 PGRST204 Could not find the 'name' column` → **只差补 `name` 列**。
+  ⚠️ 本轮开始时匿名 POST 曾被 RLS 拒（`42501`），复测已是 201 —— 以当前实测为准。
+- 验证：headless Edge + iframe 探针页（`.deepworks/tmp/fbprobe.html`）读到 `html.class=[shot]`（主脚本在跑）、
+  `#feedback offsetTop=8483 h=961 opacity=1`、`#fbForm h=493 display=grid visibility=visible`、
+  `fbDevice.value=[电脑]`（**本轮新写的 IIFE 确实执行**）、`fbCount=[0 / 1000]`、`fbContent.placeholder` 长 52 字；
+  移动端 390×844 字段垂直堆叠、无溢出。
 
 ## 6. 技术栈与运行方式
 - **纯静态前端**：`HTML + CSS + JS`，无框架、无构建、无 node 依赖，双击 `v2-index.html` 或起本地 HTTP 服务即可预览。
 - **本地预览命令**（本项目固定端口 **8123**，在项目根目录执行）：
-  `python -m http.server 8123`，然后访问 `http://127.0.0.1:8123/v2-web/v2-index.html`。
+  `python -m http.server 8123`，然后访问 `http://127.0.0.1:8123/v3-web/v3-index.html`。
 - **截图模式**：URL 追加 `?shot=1`（如 `...v2-index.html?shot=1`）可立即显示所有区块并收敛首屏高度；
   该参数还会**强制打开视差背景**（`body.is-parallax-on`）、并让**足迹拼图跳过动画直接定格成拼好的矩形**，便于静态截图取证。
 - **山峦背景调参**：改 `v2-web/tools/gen-bg-parallax.py` 里的 `LAYERS`（峰数/宽窄/高度/噪声/谷底）与 `PALETTE`（配色），
@@ -295,8 +318,12 @@ artifacts/
        归一化用**笔尖总弧长 `trkL`**（与 `pen()` 同一把尺 ⇒ 笔尖到哪、墨正好显完）；删除整套 ② Zhang-Suen 细化 / 深搜走笔 / Dijkstra 距离场 / `DX/DY/DW` 与全部临时诊断块。
        数字验证（`?worddebug=1` 回传）：`trkN=2087 / trkL=3172 / strokes=9`；逐笔时间窗与自己 x 范围吻合（第一笔 `xr=32..226`，原为 `32..468`）、
        `xbT` 严格递增、**x 分箱单调 17/17**、各时间档墨迹量 1398~2941 均匀（无 31662 巨桶）。详见第十一次追加迭代。
-- **下一版（文件版本 v3 = 课程 V3）**：接入 Supabase Dashboard + Feedback（意见反馈后台）。
-- **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）。
+- **v3**（2026-09-17 起，进行中）：新增「问题反馈」板块（导航第 8 项 + 板块 09「留句话给我」）——
+  姓名 / 设备下拉 / 大反馈框（52 字灰色引导字）三字段，提交写入 Supabase `public.user_feedback`。
+  前端（HTML/CSS/JS）与写入链路已完成并验证（桌面 + 移动）；数据库侧只差在 SQL Editor 执行
+  `v3-web/supabase-setup.sql` **第 1 步**补 `name` 列。详见 `docs/v3-progress-report.md`。
+- **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
+- **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 
 ## 7. 待办 / 下一步
 1. **[已完成] 足迹照片**：10 张实拍已接入 `v2-web/assets/journey/`（见 §5）。源图在项目根 `照片展示/`（12 张，约 78MB，**勿提交**）。
@@ -316,10 +343,12 @@ artifacts/
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
 4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
    - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
-5. 下一版：课程 V3 → 接入 Supabase 做 Dashboard 和 Feedback（文件版本将命名为 `v3-web/`）。
+5. **[进行中] 课程 V3**：Supabase Dashboard + Feedback。前端反馈板块已完成入库（`v3-web/`，见 §5 / §6.5）；
+   待用户在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 补 `name` 列后，做一次端到端提交测试。
 6. 可选：继续微调山峦（`v2-web/tools/gen-bg-parallax.py` 的 `LAYERS` / `PALETTE`）。
-7. **about-screen 下沿横向硬边（下一轮修，用户已定）**：文档 y=1800（about-screen 底 vs 视差天幕交界）横贯天空有 **+11.6** 的逐行亮度跳变，
-   **非本轮引入**。做法照首屏→第二页接缝：在交界处压一条同色渐隐窄带，实测目标 **< 1.5**。数值见第七次追加迭代。
+7. **[已完成] about-screen 下沿横向硬边**：真因是 `.about-screen__bg` 渐变的**末档 alpha 仍是 0.32**（实测桌面 52.96、移动 3.61/3.62），
+   把**末档改为 0** 后 → 桌面 1.35 / 9.23→0.76 / 7.33→0.73、移动 1.22；同时校正判据为「**硬边 = 单行 STEP，连续陡坡 RAMP 不算缺陷**」，
+   全页 6 处交界巡检 STEP 全 0。已 commit `e02a562`。⚠️ **`v2-style.css` L486-500 里那档 alpha 必须保持 0**，不要"顺手调亮"。
 8. **手机端照片墙是否"钉住"**：用户已确认**保持现状**（不钉住，照片随页面上滚）。
    若要改：把 `≤760px` 的 `.about-main` 由 `grid` 改 `block`，让 `.about-photo` 的 sticky 真正生效（另见 §6 末条）。
 
@@ -328,6 +357,16 @@ artifacts/
 - **本地预览**：用 Python 启动 `http.server` 于端口 **8123**（项目根目录，长期沿用）。
 - **截图工具**：使用系统自带 Microsoft Edge 无头模式（headless）截图，已验证可用。
 - **node**：本机**不可用**（`node --check` 报 CommandNotFoundException），所以不要依赖 npm/构建链。
+  验证 JS 只能靠 **headless Edge 跑真实页面 + 读页面内部状态**（探针页范例：`.deepworks/tmp/fbprobe.html`，
+  用同源 iframe + `contentDocument` 读 class/尺寸/computed style，再用 `shot.ps1` 截图查看）。
+- **Python**：**3.14.3 可用**（`python -m http.server 8123` 起静态服务）；**无 PIL**，图像处理请走 PowerShell `System.Drawing`。
+- **Supabase（课程 V3 引入）**：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`；
+  publishable key 在 `v3-web/v3-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全由 RLS 负责）；
+  建表 / 补列脚本 `v3-web/supabase-setup.sql`（幂等）。
+  ⚠️ 该项目的 `/rest/v1/` 根自省端点需要 **secret key**，只有 publishable key 时不要走那里；
+  表名 / 列名用 PostgREST 的报错信息反推（例如 hint "Perhaps you meant the table 'public.user_feedback'"、`PGRST204`）。
+  ⚠️ 用 PowerShell 发请求时：`curl.exe` 直拼 `?select=*&limit=1` 会被 shell 弄坏（改用 `Invoke-WebRequest` 单引号拼 URL，
+  或 `curl.exe -G --data-urlencode`）；PS 5.1 读错误 body 用 `$_.ErrorDetails.Message`，不要用 `GetResponseStream()`。
 - **未纳入版本控制的本地文件**（用户尚未决定是否提交）：`个人主页背景1.mp4`、`个人主页背景1-压缩版.mp4`、
   `个人主页背景2.mp4`（首屏视频的原始素材，`uploads/` 下有同源副本）、`照片展示/`（12 张原图约 78MB）、
   `网页截图/`、`opencode.jsonc`、`.opencode/`、`outputs/`。临时件统一放 `.deepworks/tmp/`（已被 `.gitignore` 忽略）。
@@ -347,7 +386,7 @@ artifacts/
   - 打开前先确认本地静态服务在运行（本项目固定在 `8123` 端口）：
     项目根目录执行 `python -m http.server 8123`；若未运行需先启动。
   - 当前预览地址：`http://127.0.0.1:8123/<版本目录>/<版本>-index.html`
-    （当前 v2 为 `http://127.0.0.1:8123/v2-web/v2-index.html`；下一版开始替换为对应版本目录）。
+    （当前 v3 为 `http://127.0.0.1:8123/v3-web/v3-index.html`；下一版开始替换为对应版本目录）。
 - 打开后**等待用户看过并给出反馈**，再进入下一步修改；用户确认前不要自行推进大改。
 
 ## 9. 给下一位智能体的提示
@@ -356,7 +395,7 @@ artifacts/
 - 每次迭代务必：**做新功能 → 用内置浏览器打开预览给用户看 → 截图（桌面+移动）→ 更新进度报告 md → git commit 存档**（见 §8.6）。
 - **commit 标题必须是一句简短、能说明本次优化点的中文**（见 §8.5）。
 - **不要提交**未确认的本地文件（见 §8 末尾清单）；`git add` 时逐项写具体路径，避免误提交视频/截图等大文件。
-- **当前预览地址**：`http://127.0.0.1:8123/v2-web/v2-index.html`（v1 路径仅作历史参考）。
+- **当前预览地址**：`http://127.0.0.1:8123/v3-web/v3-index.html`（v1 / v2 路径仅作历史参考）。
 - **改山峦背景**：改 `v2-web/tools/gen-bg-parallax.py` 的 `LAYERS`/`PALETTE` → 跑 `python v2-web/tools/gen-bg-parallax.py`；
   脚本幂等（先删后插），连续运行输出字节一致。
 - **改首屏视频**：换镜头/时长改 `v2-web/tools/build-hero-loop.ps1` 顶部 `$edl`/`$fade` 后重跑；
