@@ -393,13 +393,6 @@ b {
   font-weight: 400;
 }
 
-.hero__actions {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -434,27 +427,74 @@ b {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* ---------- 首屏下滑引导（两侧文案 + 中间动态箭头）
+   取代原来那两个实体按钮：按钮太"像可点"，访客会去点而不是往下滑。 ---------- */
 .hero__scroll {
   position: absolute;
-  bottom: 30px;
+  bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
-  width: 26px;
-  height: 44px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
 }
-.hero__scroll span {
+
+/* 两侧文案：仍然可点（跳到对应板块），但只做弱化文字，不做按钮外观 */
+.hero__scroll-link {
+  position: relative;
+  color: rgba(255, 255, 255, 0.62);
+  transition: color 0.25s ease;
+}
+.hero__scroll-link::after {
+  content: "";
   position: absolute;
-  top: 8px;
-  left: 50%;
-  width: 4px;
-  height: 9px;
-  margin-left: -2px;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 2px;
-  animation: scrollDown 1.8s infinite;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.hero__scroll-link:hover {
+  color: rgba(255, 255, 255, 0.96);
+}
+.hero__scroll-link:hover::after {
+  opacity: 0.55;
+  transform: scaleX(1);
+}
+
+/* 中间的向下箭头：上下浮动 + 明暗呼吸，明确表达"往下滑" */
+.hero__scroll-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: rgba(255, 255, 255, 0.95);
+  animation: heroArrowFloat 1.7s ease-in-out infinite;
+}
+.hero__scroll-arrow svg {
+  display: block;
+}
+
+@keyframes heroArrowFloat {
+  0%, 100% { transform: translateY(-4px); opacity: 0.55; }
+  50%      { transform: translateY(3px);  opacity: 1; }
+}
+
+/* 系统里关了动画就让它静静停住（仍然看得见箭头） */
+@media (prefers-reduced-motion: reduce) {
+  .hero__scroll-arrow {
+    animation: none;
+    opacity: 0.9;
+  }
 }
 
 @keyframes heroUp {
@@ -1505,9 +1545,14 @@ html.shot .word-pen {
 }
 
 @media (max-width: 420px) {
-  .hero__actions {
-    flex-direction: column;
-    align-items: stretch;
+  /* 窄屏：下滑引导收窄一点，保证"文案 + 箭头 + 文案"一行放得下、不折行 */
+  .hero__scroll {
+    gap: 12px;
+    font-size: 0.78rem;
+  }
+  .hero__scroll-arrow {
+    width: 28px;
+    height: 28px;
   }
   .btn {
     justify-content: center;

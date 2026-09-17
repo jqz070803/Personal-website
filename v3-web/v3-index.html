@@ -6,7 +6,7 @@
   <meta name="description" content="江沁钊的个人主页 —— 一个行走于山川湖海之间的观察者，用镜头记录每一帧美好。" />
   <title>江沁钊 · 行走于山川湖海的观察者</title>
   <!-- 版本号 ?v= 用于强制浏览器取新样式：改动 CSS 后请同步+1（避免旧样式被缓存导致"改了看不见"） -->
-  <link rel="stylesheet" href="v3-style.css?v=1" />
+  <link rel="stylesheet" href="v3-style.css?v=2" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -190,13 +190,19 @@
           <span class="tag">剪辑</span>
           <span class="tag">乐于助人</span>
         </div>
-        <div class="hero__actions">
-          <a class="btn btn--primary" href="#journey">走进我的世界</a>
-          <a class="btn btn--ghost" href="#lens">看看我的镜头</a>
-        </div>
       </div>
-      <div class="hero__scroll" aria-hidden="true">
-        <span></span>
+      <!-- 下滑引导：中间动态箭头是主角；两侧文案只是"下面有什么"的提示，
+           刻意做成弱化文字（仍然可点、能跳转，但没有按钮外观，不抢走"往下滑"的意图）。 -->
+      <div class="hero__scroll">
+        <a class="hero__scroll-link" href="#journey">走进我的世界</a>
+        <span class="hero__scroll-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4.5v13" />
+            <path d="M6.5 12.5 12 18l5.5-5.5" />
+          </svg>
+        </span>
+        <a class="hero__scroll-link" href="#lens">看看我的镜头</a>
       </div>
     </section>
 
@@ -732,7 +738,7 @@
     </p>
   </footer>
 
-  <script src="v3-about-data.js?v=1"></script>
-  <script src="v3-script.js?v=1"></script>
+  <script src="v3-about-data.js?v=2"></script>
+  <script src="v3-script.js?v=2"></script>
 </body>
 </html>

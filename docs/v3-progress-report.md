@@ -194,3 +194,29 @@
   截图证据 `artifacts/screenshots/v3-live-github-pages-desktop.png`（导航 8 项 / 首屏视频 / 两个按钮 / 山峦渲染正常）。
   → 反馈板块的提交链路在线上同样可用（同一份 JS + 同一个 Supabase 表）。
 - 接入过程与踩坑（无关历史合并、`github.com` 连接不稳、GCM 非交互不弹窗）见 `docs/project-continuity.md` **§6.6**。
+
+---
+
+## 7. 上线后增量迭代（2026-09-17）
+
+### 7.1 首屏 CTA 改为「下滑引导」（用户反馈）
+
+**问题**：首屏那两个实体按钮（`走进我的世界` / `看看我的镜头`）"容易让别人去点击，而不是往下滑看内容" ——
+按钮的视觉强度盖过了"继续滚动"的意图。
+
+**改动**：
+
+| 位置 | 改动 |
+| :--- | :--- |
+| `v3-index.html` | 删除 `.hero__actions` 两个 `.btn`；原 `.hero__scroll`（鼠标形状）改为 **文案 + 箭头 + 文案** 三段式 |
+| `v3-style.css` | 删除 `.hero__actions` 规则与 420px 下的按钮堆叠；新增 `.hero__scroll` / `.hero__scroll-link` / `.hero__scroll-arrow` / `@keyframes heroArrowFloat` |
+
+- **中间箭头**：内联 SVG（竖线 + 人字箭头，`stroke-linecap: round`），`heroArrowFloat` 1.7s 循环上下浮动 4px/3px 并做明暗呼吸；
+  系统开启"减少动效"时自动静止（仍可见）。
+- **两侧文案**：**保留可点**（`#journey` / `#lens`），但去掉按钮的全部外观（无底色、无描边、无阴影、无大内边距），
+  默认 `rgba(255,255,255,.62)`，hover 才提亮到 `.96` + 浮现一条细下划线 → 「细看才像链接」，不再抢走下滑意图。
+- **无障碍**：容器去掉了原来的 `aria-hidden="true"`（里面现在有可聚焦链接，不能再整体隐藏）。
+- **缓存**：`?v=1 → ?v=2`（CSS/JS/数据脚本三处同步）。
+
+**验证**：1440×900 与 390×844 实拍均正常 —— 三段式一行排开、不折行、箭头居中、`hero__actions` 无残留；
+`.btn` 保留后页脚邮箱与反馈提交按钮样式不受影响。实拍见 `artifacts/screenshots/v3-hero-scrollhint-desktop.png` / `-mobile.png`。

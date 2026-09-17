@@ -340,6 +340,13 @@ docs/
   姓名 / 设备下拉 / 大反馈框（52 字灰色引导字）三字段，提交写入 Supabase `public.user_feedback`。
   前端（HTML/CSS/JS）、RLS 策略与端到端提交链路全部实测通过（桌面 + 移动）。详见 `docs/v3-progress-report.md`。
   → 课程 V3 里**仍未开始**的是 **Dashboard（数据看板）** 部分。
+  - **上线后增量（2026-09-17，用户反馈）**：首屏那两个实体按钮「走进我的世界 / 看看我的镜头」
+    "太像可以点的东西，访客会去点而不是往下滑" → **删除这两个按钮**，把原来底部那个鼠标形下滑提示
+    改造为 **「走进我的世界 ↓ 看看我的镜头」**：中间 SVG 向下箭头 + `heroArrowFloat`（上下浮动 + 明暗呼吸，1.7s 循环，
+    `prefers-reduced-motion` 下静止）；两侧文案降级为弱化文字（`.hero__scroll-link`，**仍可点**跳 `#journey` / `#lens`，
+    但无按钮外观，hover 才提亮 + 一条细下划线）。`.hero__actions` 及其 420px 下的按钮堆叠规则一并删除
+    （⚠️ `.btn` **必须保留** —— 页脚邮箱链接与反馈提交按钮还在用）。资源版本 `?v=1 → ?v=2`。
+    实拍 `artifacts/screenshots/v3-hero-scrollhint-desktop.png` / `-mobile.png`（桌面/移动均单行不折行）。
 - **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 
