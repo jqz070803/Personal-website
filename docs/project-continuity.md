@@ -29,8 +29,9 @@
   以及首屏之后淡入的「太阳 + 分层细节山峦」视差背景，并把「学习日常」改写为**劳逸结合**——
   以上**全部属于文件版本 v2**）。
 - **V3** = Supabase Dashboard + Feedback（接入后端、数据看板、意见反馈）。
-  → **★ 进行中（2026-09-17）**：已归档为 **`v3-web/`**（见 §4）；前端「问题反馈」板块与 Supabase 写入链路已完成，
-    数据库侧只差给 `user_feedback` 表补一个 `name` 列（见 §6.5 的 v3 条目）。
+  → **★ 已完成（2026-09-17，tag `v3`）**：已归档为 **`v3-web/`**（见 §4）；Feedback 前端板块 + Supabase 写入链路
+    已端到端实测通过，`user_feedback` 表结构与 RLS 全部就位（见 §6.5 的 v3 条目）。
+    仍未开始的是课程 V3 里的 **Dashboard（数据看板）** 部分。
 - **V4** = 数字孪生 / AI 集成（把 AI 能力真正融入页面）。
 
 > ⚠️ **两套编号不要混**：**课程阶段**用 V1～V4（大写 V + 大纲顺序），**文件版本**用 v1/v2/v3…（小写 v + 目录名）。
@@ -133,20 +134,21 @@ artifacts/
   单词实体几何（桌面 1440×900）：`#aboutScreenWord` 屏幕位 `x340 w760 h198`、文档 absTop **1276** → 开演 scrollY ≈ **736**；墨迹实测 **760×198**（canvas 尺寸）、墨迹 bbox `x 32..738 / y 8..189`。
   ⚠️ 历史教训（勿回退）：**不要**用"从笔尖出发沿墨迹累加像素距离"（Dijkstra 时间场）定揭示时刻——轨迹弧长比水平距离长得多（笔1 弧长 892px 只横跨 179px），加性距离会把空间相邻、笔序很晚的墨提前染色，实测整个 "about" 被并进第一笔时间窗，观感就是"一大片横向一起亮"。
    ⚠️ 已知取舍：字体轮廓是并集整体，参考图那种"笔画交叠半透明"无法复现（详见第九次追加迭代）。
-### v3（进行中：「问题反馈」板块 = 课程 V3 的 Feedback）
+### v3（★ 已完成：「问题反馈」板块 = 课程 V3 的 Feedback）
 ```
 v3-web/
 ├── v3-index.html          # 由 v2 复制：导航追加「反馈」（共 8 项）、footer 改「v3 · 问题反馈」、在 #contact 之后插入 #feedback 板块（序号 09「留句话给我」）+ #fbForm（#fbName / #fbDevice / #fbContent / #fbCount / #fbSubmit / #fbStatus + 两处 #fbNameErr/#fbContentErr）；三处资源引用改 ?v=1
 ├── v3-style.css           # 末尾追加 .fb* 反馈表单样式块（约 150 行，设计变量全部沿用 v2）：磨砂卡片、聚焦冷蓝发光、自绘下拉箭头、文本域 min-height 190px、≤760px 两列堆叠 + 按钮占满整行
 ├── v3-script.js           # 末尾追加反馈表单 IIFE（约 220 行）：设备 UA 预选、字数 n/1000、localStorage 草稿（v3-feedback-draft）、姓名/内容校验、POST {SUPABASE_URL}/rest/v1/user_feedback（Prefer: return=minimal，body {name, device, content}）、失败按 code 提示 + 邮件兜底、lock() 防重复提交
 ├── v3-about-data.js       # 与 v2 完全一致（笔顺唯一真源，未改）
-├── supabase-setup.sql     # ★ 数据库初始化脚本：补 name 列 + grant insert to anon + RLS insert 策略（幂等，可重复执行）
+├── supabase-setup.sql     # ★ 数据库一键脚本（3,716 B，可整段粘进 SQL Editor）：建表/补列（name 等）+ enable RLS + grant insert to anon + insert 策略 + 清测试数据 + 自查三连；幂等可重复执行
 ├── assets/                # 与 v2 一致（journey 10 张 / hero 视频 8.1MB / about 4 张 / fonts Pacifico）
 └── tools/                 # 与 v2 一致（gen-bg-parallax.py 仍硬编码写 v2-index.html，若要在 v3 用需改路径）
 docs/
 └── v3-progress-report.md  # ★ v3 迭代进度报告（本轮）；v1 / v2 报告保留
 ```
-- Supabase：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`（现有 `id/contact/device/content/created_at` + **待补 `name`**）。
+- Supabase：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`
+  （`id` / `name` / `device` / `content` / `contact` / `created_at` —— **已全部就位**，`name` 由用户在 2026-09-17 执行脚本补齐）。
   publishable key 写在 `v3-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全边界由 RLS 负责）。
 - **实测状态（2026-09-17 复测，含一处重要更正）**：
   - 匿名 `POST {device,content}` + `Prefer: return=minimal` → **`201`**（写入通道已打通，**页面用的就是这个**）；
@@ -154,9 +156,11 @@ docs/
     —— ⚠️ **不是策略不稳定，而是 `RETURNING` 要过 select 策略，而表上只有 insert 策略**（这个坑别再踩第二次）；
   - 匿名 `GET ?select=*` → `200 []`：**不代表表为空**，而是 anon 没有 select 策略（**有意设计，别加**）；
   - 匿名 `DELETE` → `204` / `[]`：**一行也删不掉**（没有 delete 策略）；
-  - 匿名 `POST {name,…}` → `400 PGRST204 Could not find the 'name' column` → **只差补 `name` 列**。
+  - 匿名 `POST {name,…}` → 补列前 `400 PGRST204 Could not find the 'name' column`；
+    **补列后复测（`Prefer: return=representation`）→ `42501`**：说明字段校验**已经通过**、只被 `RETURNING` 那层拦下，
+    而且**没有写入任何行** —— 这是个很有用的**无损自检手法**（详见 v3 报告 §4.2）。
 - ⚠️ 因为 anon 既不能 select 也不能 delete，**排障时插入的测试行 agent 无法自行清理**，
-  必须在 SQL Editor（owner 身份）里清；现成 SQL 见 `docs/v3-progress-report.md` §5 第 2 条。
+  必须由用户在 SQL Editor（owner 身份）里清 —— 本次已把清空语句并入 `supabase-setup.sql`，用户执行后表内归零。
 - 端到端验证（真浏览器填表 + `#fbSubmit.click()` + 回读 `#fbStatus`）两个分支都过了：
   失败 → `is-err` 红字「没能提交成功（PGRST204）…」+ 按钮解锁 + **草稿保住**；
   成功（把 `name` 从请求体里剥掉模拟补列后）→ `is-ok` 绿字「收到啦…」+ 清草稿 + 重置表单。
@@ -327,10 +331,10 @@ docs/
        归一化用**笔尖总弧长 `trkL`**（与 `pen()` 同一把尺 ⇒ 笔尖到哪、墨正好显完）；删除整套 ② Zhang-Suen 细化 / 深搜走笔 / Dijkstra 距离场 / `DX/DY/DW` 与全部临时诊断块。
        数字验证（`?worddebug=1` 回传）：`trkN=2087 / trkL=3172 / strokes=9`；逐笔时间窗与自己 x 范围吻合（第一笔 `xr=32..226`，原为 `32..468`）、
        `xbT` 严格递增、**x 分箱单调 17/17**、各时间档墨迹量 1398~2941 均匀（无 31662 巨桶）。详见第十一次追加迭代。
-- **v3**（2026-09-17 起，进行中）：新增「问题反馈」板块（导航第 8 项 + 板块 09「留句话给我」）——
+- **v3**（2026-09-17 完成，tag `v3`）：新增「问题反馈」板块（导航第 8 项 + 板块 09「留句话给我」）——
   姓名 / 设备下拉 / 大反馈框（52 字灰色引导字）三字段，提交写入 Supabase `public.user_feedback`。
-  前端（HTML/CSS/JS）与写入链路已完成并验证（桌面 + 移动）；数据库侧只差在 SQL Editor 执行
-  `v3-web/supabase-setup.sql` **第 1 步**补 `name` 列。详见 `docs/v3-progress-report.md`。
+  前端（HTML/CSS/JS）、RLS 策略与端到端提交链路全部实测通过（桌面 + 移动）。详见 `docs/v3-progress-report.md`。
+  → 课程 V3 里**仍未开始**的是 **Dashboard（数据看板）** 部分。
 - **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 
@@ -350,11 +354,12 @@ docs/
 2. **社交媒体链接**：B站 已是真实链接；抖音 / 视频号 主页链接待补 → 已按用户要求做成**不可点卡片 + 「筹备中」标注**
    （`div.social-card.social-card--soon`，不再弹 alert）。拿到链接后：把 `div` 换回 `<a href="…">`、去掉 `social-card--soon`、把「筹备中」换回 `→`。
 3. **智能体接入**：把 `#agent` 预留区变成真实可交互的 AI 助手（课程 V4）。
-4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2`。
+4. **Git 存档点（后悔药）**：仓库已在项目根初始化（`git init`，分支 `master`），已有 tag `v1` / `v2` / `v3`。
    - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
-5. **[进行中] 课程 V3**：Supabase Dashboard + Feedback。前端反馈板块已完成入库（`v3-web/`，见 §5 / §6.5）；
-   待用户在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 补 `name` 列后，做一次端到端提交测试。
-   ⚠️ 另需用户在同一处**清理 agent 留下的测试行**（anon 无 select / delete 权限，详见 §6.5 与 v3 报告 §5）。
+5. **[已完成] 课程 V3 的 Feedback 部分**：反馈板块已上线入库（`v3-web/`，见 §5 / §6.5）。
+   用户已执行 `v3-web/supabase-setup.sql`（补 `name` 列 + RLS + 清空测试数据）并确认页面提交成功，已打 tag `v3`。
+   → **仍未开始：课程 V3 的 Dashboard（数据看板）部分**，请在 Supabase 控制台里做（Table Editor / 图表 / SQL 报表）；
+   ⚠️ **不要**为了"能在网页上读数据"而给 anon 加 select 策略。
 6. 可选：继续微调山峦（`v2-web/tools/gen-bg-parallax.py` 的 `LAYERS` / `PALETTE`）。
 7. **[已完成] about-screen 下沿横向硬边**：真因是 `.about-screen__bg` 渐变的**末档 alpha 仍是 0.32**（实测桌面 52.96、移动 3.61/3.62），
    把**末档改为 0** 后 → 桌面 1.35 / 9.23→0.76 / 7.33→0.73、移动 1.22；同时校正判据为「**硬边 = 单行 STEP，连续陡坡 RAMP 不算缺陷**」，

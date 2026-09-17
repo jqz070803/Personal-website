@@ -27,7 +27,7 @@
 | `v3-web/v3-style.css` | 50,394 B | 末尾追加 `.fb*` 反馈表单样式（约 150 行） |
 | `v3-web/v3-script.js` | 47,264 B | 末尾追加反馈表单 IIFE（约 220 行，含 Supabase 提交） |
 | `v3-web/v3-about-data.js` | 5,792 B | 手写单词笔顺数据源，v3 未改 |
-| `v3-web/supabase-setup.sql` | 1,858 B | 数据库初始化脚本（补列 + RLS 兜底），交给用户在 SQL Editor 执行 |
+| `v3-web/supabase-setup.sql` | 3,716 B | 数据库**一键脚本**（建表/补列 + RLS 策略 + 清测试数据 + 自查三连），用户整段粘进 SQL Editor 即可 |
 
 ---
 
@@ -79,14 +79,15 @@
 
 - 项目 URL：`https://joqhbooccydgajunwnwf.supabase.co`
   （publishable key 写在 `v3-web/v3-script.js` 顶部常量 `SUPABASE_KEY`；该 key 设计上可公开，安全边界由 RLS 负责）。
-- 表：`public.user_feedback`，现有列 `id` / `contact` / `device` / `content` / `created_at`。
+- 表：`public.user_feedback`，列 `id` / `name` / `device` / `content` / `contact` / `created_at`
+  （`name` 由用户在 2026-09-17 执行 `supabase-setup.sql` 补齐，**现已全部就位**）。
 - **实测结论（逐条验证）**：
 
 | 探测 | 结果 | 含义 |
 | :--- | :--- | :--- |
 | 匿名 `POST {device, content}` + `Prefer: return=minimal` | **`201`** | **匿名写入通道已打通**（页面用的就是这一种） |
 | 匿名 `POST {device, content}` + `Prefer: return=representation` | `42501`<br>`new row violates row-level security policy` | 表上**只有 insert 策略、没有 select 策略**，而 `RETURNING` 要过 select 策略 → 报错 |
-| 匿名 `POST {name, device, content}` | `400 PGRST204`<br>`Could not find the 'name' column` | 表里**还缺 `name` 列** |
+| 匿名 `POST {name, device, content}` | 补列前 `400 PGRST204`<br>`Could not find the 'name' column` | 表里**当时缺 `name` 列** —— **已修复**，见 §4.2 |
 | 匿名 `GET ?select=*` | `200 []` | **不代表表为空**（anon 没有 select 策略） |
 | 匿名 `DELETE` | `204` / `[]` | **一行也删不掉**（没有 delete 策略） |
 
@@ -103,9 +104,8 @@
 > ⚠️ 副作用：因为 anon 既无 select 也无 delete 权限，本轮排障时插入的测试行
 > **我删不掉也看不见**，需要你在 SQL Editor（owner 身份）里清理 → 见 §5 第 2 条。
 
-- 因此数据库侧**只差一步**：在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 的**第 1 步**
-  （`alter table public.user_feedback add column if not exists name text;`）。
-  脚本里的第 2、3 步（grant + RLS 策略）是幂等兜底，重复执行不会报错，也不会动已配好的策略。
+- 数据库侧当时**只差一步**：在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql`。
+  ✅ **2026-09-17 用户已执行完毕** —— `name` 列就位、测试数据清空、页面提交成功，Feedback 部分闭环（见 §4.2）。
 
 ---
 
@@ -144,6 +144,20 @@
 
 两个分支都验过了，所以"补上 `name` 列之后到底能不能用"这件事，**除列本身以外的环节已无悬念**。
 
+### 4.2 补列后复测（无损自检）与最终确认
+
+| 时间 | 动作 | 结果 |
+| :--- | :--- | :--- |
+| 补列后 | 匿名 `GET ?select=name` | `200 []` → **列已存在**（列不存在时 PostgREST 会回 `400`），且**没有读到任何数据** |
+| 补列后 | 匿名 `POST {name, device, content}` + `Prefer: return=representation` | `42501`（被 `RETURNING` 那层 RLS 拦下）→ **字段校验已通过**，不再是 `PGRST204`；**且没有写入任何行** |
+| 推理 | 页面用的是 `Prefer: return=minimal` | 字段校验是同一道，因此**页面这条路必然成功** |
+| 用户实测 | 在页面上真实填表提交 → Table Editor 查看 | ✅ **用户确认成功** |
+
+> **值得记住的无损自检手法**：想确认"页面 payload 与线上表结构是否匹配"时，
+> 用 `Prefer: return=representation` 发一次同 body 的请求 ——
+> 字段不匹配 → `400 PGRST204`（直接告诉你是哪一列缺了）；字段匹配 → 被 `RETURNING` 那层拦成 `42501`。
+> **两种结果都不会写入数据**，所以可以放心拿它检查线上表，不会留下垃圾行。
+
 > 小提示：失败文案会把 PostgREST 的错误码（如 `PGRST204`）直接显示给访客。
 > 这是**故意保留**的（方便一眼看出是数据库问题）；若觉得太技术化，下一轮可改为
 > "稍后再试"并把错误码只写进 `console`。
@@ -152,28 +166,13 @@
 
 ## 5. 遗留 / 下一步
 
-1. **[待用户 · 阻塞项]** 在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 的**第 1 步**
-   （`alter table public.user_feedback add column if not exists name text;`）。
-   **不补这一列，访客提交一定失败**（`400 PGRST204`）。
-2. **[待用户 · 清理测试数据]** 排障期间我往表里插入过测试行，而 anon 既没有 select 也没有 delete 权限，
-   **我删不掉也看不见**。请在 SQL Editor（owner 身份，绕过 RLS）里先看一眼、再清掉：
-
-   ```sql
-   -- ① 先看看表里到底有什么（包括我留下的测试行）
-   select id, contact, device, content, created_at
-     from public.user_feedback
-    order by created_at desc;
-   ```
-
-   ```sql
-   -- ② 确认后清掉测试行（也可以直接在 Table Editor 里勾选删除）
-   delete from public.user_feedback
-    where content in ('probe', 'probe-b')
-       or content like '%dw-probe-marker%'
-       or content like '%端到端测试%';
-   ```
-3. **[待做]** 用户补列后，我再跑一次**不带 `mock`** 的端到端提交，确认表内真的多出一行 →
-   然后 `git commit` 并打 tag `v3`。
-4. 课程 V3 的 **Dashboard**（数据看板）尚未开始 —— 它应当在 Supabase 控制台里做，
-   **不要**为了"能读到数据"而给 anon 加 select 策略。
+1. **[已完成] 数据库侧配置**：用户在 Supabase 控制台 → SQL Editor 执行了 `v3-web/supabase-setup.sql`
+   （一键脚本：建表 / 补 `name` 列 + RLS 策略 + 清空测试数据），并确认页面提交成功。
+   **课程 V3 的 Feedback 部分到此闭环**，已打 tag `v3`。
+2. **[未开始] 课程 V3 的 Dashboard（数据看板）** —— 应当在 Supabase **控制台**里做
+   （Table Editor + 图表 / SQL 报表即可满足课程要求）。
+   ⚠️ **不要**为了"能在网页上读数据"而给 anon 加 select 策略：反馈内容不该被任何匿名访客翻看。
+3. **[可选] 目前只采集了姓名与设备**：若后续想回信，可启用已预留的 `contact` 列。
+4. **[可选] 失败提示里的错误码**：当前失败文案会把 `PGRST204` 这类技术码直接显示给访客（排障期故意保留）；
+   若觉得太技术化，可改为统一「稍后再试」，把错误码只写进 `console`。
 5. 抖音 / 视频号 链接（v2 遗留）仍未拿到。
