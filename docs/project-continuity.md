@@ -347,6 +347,14 @@ docs/
     但无按钮外观，hover 才提亮 + 一条细下划线）。`.hero__actions` 及其 420px 下的按钮堆叠规则一并删除
     （⚠️ `.btn` **必须保留** —— 页脚邮箱链接与反馈提交按钮还在用）。资源版本 `?v=1 → ?v=2`。
     实拍 `artifacts/screenshots/v3-hero-scrollhint-desktop.png` / `-mobile.png`（桌面/移动均单行不折行）。
+  - **上线后增量 ②（2026-09-17，用户反馈）**：「山川湖海足迹」10 张照片支持**点击放大**（lightbox）——
+    大图不铺满屏（`max-width: min(1120px,86vw)` + `max-height: 74vh`，四周留白），
+    背景用 `backdrop-filter: blur(24px) saturate(1.15)` 把"此刻的页面"虚化成底图（**不是固定背景图**），
+    右上角圆形叉 / **点大图周边空白** / `Esc` 三条路径均可关闭，**点大图本身刻意不关**（看细节防误触）；
+    `html.lbox-open` 锁滚动并按 `innerWidth - clientWidth` 补偿滚动条宽度。
+    结构与样式加在 `v3-index.html`（**必须放在两个 `<script>` 之前** —— `position: fixed` 落在带 `transform` 的祖先里会退化）
+    与 `v3-style.css`；交互逻辑是 `v3-script.js` **末尾新增的独立 IIFE**（原有 11 个 IIFE 未改动）。资源版本 `?v=2 → ?v=3`。
+    行为逐条实测 + 实拍 `artifacts/screenshots/v3-lightbox-open-desktop.png` / `-mobile.png`。详见 `docs/v3-progress-report.md` §7.2。
 - **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 

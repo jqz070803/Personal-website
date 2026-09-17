@@ -1090,6 +1090,165 @@ html.shot .word-pen {
 }
 
 /* =========================================================
+   足迹照片放大预览（lightbox）
+   大图不铺满屏幕：四周留白；背景用 backdrop-filter 把"此时的页面"虚化当底图。
+   ========================================================= */
+.lbox {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 5vh, 60px) clamp(16px, 7vw, 96px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.32s ease, visibility 0.32s;
+}
+.lbox.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 虚化底图：模糊页面本身 + 轻压暗，让大图"浮"上来 */
+.lbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 11, 21, 0.55);
+  -webkit-backdrop-filter: blur(24px) saturate(1.15);
+  backdrop-filter: blur(24px) saturate(1.15);
+  cursor: zoom-out;
+}
+
+.lbox__stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 100%;
+  /* 关键：舞台自身"放行"鼠标 —— 于是点图片周围空白会落到 backdrop 上（=关闭），
+     而点图片本身什么也不会发生。 */
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.965) translateY(8px);
+  transition: opacity 0.34s ease, transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lbox.is-open .lbox__stage {
+  opacity: 1;
+  transform: none;
+}
+
+.lbox__img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(1120px, 86vw);
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 40px 90px rgba(2, 8, 18, 0.6), 0 6px 22px rgba(2, 8, 18, 0.5);
+  background: rgba(8, 16, 28, 0.6);
+  pointer-events: auto;
+}
+
+/* 关闭叉：贴在大图右上角（略微探出到图上沿外侧） */
+.lbox__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(12, 20, 34, 0.74);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 8px 24px rgba(2, 8, 18, 0.5);
+  transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+}
+.lbox__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.06);
+}
+.lbox__close:focus-visible {
+  outline: 2px solid rgba(124, 192, 255, 0.9);
+  outline-offset: 2px;
+}
+
+.lbox__cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 12px rgba(2, 8, 16, 0.6);
+}
+.lbox__cap b {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.lbox__cap span {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.68);
+}
+.lbox__cap b:empty,
+.lbox__cap span:empty {
+  display: none;
+}
+
+/* 打开时的滚动锁：必须挂在 <html> 上（只给 body 设 overflow 在部分浏览器无效） */
+html.lbox-open {
+  overflow: hidden;
+}
+
+/* 照片可点放大：提示光标 */
+.ms-tile {
+  cursor: zoom-in;
+}
+
+@media (max-width: 560px) {
+  .lbox {
+    padding: 11vh 20px;
+  }
+  .lbox__img {
+    max-width: 92vw;
+    max-height: 66vh;
+  }
+  .lbox__close {
+    top: -12px;
+    right: -8px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lbox,
+  .lbox__stage {
+    transition: none;
+  }
+  .lbox__stage {
+    transform: none;
+  }
+}
+
+/* =========================================================
    镜头 —— 线性 SVG 图标 + 克制设计
    ========================================================= */
 .lens-card {

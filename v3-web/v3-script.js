@@ -1198,3 +1198,82 @@
     setStatus("上次没写完的内容，我帮你留着了。", "");
   }
 })();
+
+/* =========================================================
+   足迹照片放大预览（lightbox）
+   点照片 → 打开大图；右上角 × / 点图片周边空白 / Esc → 关闭。
+   刻意不做"点大图本身也关闭"：放大看细节时误触会很难受。
+   ========================================================= */
+(function () {
+  "use strict";
+
+  var mosaic = document.querySelector("[data-mosaic]");
+  var box = document.getElementById("lbox");
+  if (!mosaic || !box) return; /* 旧版页面没有足迹拼图/灯箱就直接跳过 */
+
+  var imgEl = document.getElementById("lboxImg");
+  var titleEl = document.getElementById("lboxTitle");
+  var descEl = document.getElementById("lboxDesc");
+  var closeEl = document.getElementById("lboxClose");
+  if (!imgEl) return;
+
+  var lastFocus = null;
+
+  /* ---------- 滚动锁：类挂在 <html> 上（只设 body 在部分浏览器无效），
+       并补上滚动条宽度，避免锁上/解开时整页横向抖一下 ---------- */
+  function lock(on) {
+    var root = document.documentElement;
+    if (on) {
+      var sbw = window.innerWidth - root.clientWidth;
+      root.style.paddingRight = sbw > 0 ? sbw + "px" : "";
+      root.classList.add("lbox-open");
+    } else {
+      root.classList.remove("lbox-open");
+      root.style.paddingRight = "";
+    }
+  }
+
+  function open(media) {
+    var tile = media.closest(".ms-tile");
+    var capB = tile ? tile.querySelector(".ms-tile__cap b") : null;
+    var capS = tile ? tile.querySelector(".ms-tile__cap span") : null;
+
+    imgEl.src = media.currentSrc || media.src;
+    imgEl.alt = media.alt || "放大的足迹照片";
+    if (titleEl) titleEl.textContent = capB ? capB.textContent.trim() : "";
+    if (descEl) descEl.textContent = capS ? capS.textContent.trim() : "";
+
+    lastFocus = document.activeElement;
+    box.classList.add("is-open");
+    lock(true);
+    if (closeEl) closeEl.focus();
+  }
+
+  function close() {
+    if (!box.classList.contains("is-open")) return;
+    box.classList.remove("is-open");
+    lock(false);
+    /* 焦点还给刚才那张照片，键盘用户不会"迷路" */
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  /* ---------- 打开：事件委托挂在拼图容器上，飞入动画期间也照样可点 ---------- */
+  mosaic.addEventListener("click", function (e) {
+    var media = e.target && e.target.closest ? e.target.closest(".ms-tile__media") : null;
+    if (media) open(media);
+  });
+
+  /* ---------- 关闭：右上角 ×、点图片周边空白（backdrop）、Esc ---------- */
+  if (closeEl) {
+    closeEl.addEventListener("click", function (e) {
+      e.preventDefault();
+      close();
+    });
+  }
+  box.addEventListener("click", function (e) {
+    if (e.target && e.target.hasAttribute && e.target.hasAttribute("data-lbox-close")) close();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" || e.keyCode === 27) close();
+  });
+})();

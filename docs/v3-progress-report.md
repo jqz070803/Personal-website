@@ -220,3 +220,46 @@
 
 **验证**：1440×900 与 390×844 实拍均正常 —— 三段式一行排开、不折行、箭头居中、`hero__actions` 无残留；
 `.btn` 保留后页脚邮箱与反馈提交按钮样式不受影响。实拍见 `artifacts/screenshots/v3-hero-scrollhint-desktop.png` / `-mobile.png`。
+
+### 7.2 「山川湖海足迹」照片点击放大（lightbox）
+
+**诉求**（用户原话）：点单张照片看大图；**大图不要填满整屏、四周留白**；背景用"网站此时的虚化效果"当底图；
+大图右上角要有叉可关闭；**点大图周边的空白处也能关闭**。
+
+**实现**：
+
+| 位置 | 改动 |
+| :--- | :--- |
+| `v3-index.html` | `<body>` 内、两个 `<script>` **之前**新增 `.lbox` 结构（backdrop + stage + `#lboxImg` + `#lboxClose` + 两段说明文字）；版本 `?v=2 → ?v=3` |
+| `v3-style.css` | 新增 `.lbox*` 一整段（放在 `.journey-note` 之后，与足迹板块相邻） |
+| `v3-script.js` | **文件末尾追加一个新 IIFE**（原有 11 个 IIFE 一字未动） |
+
+- **为什么插在 `<script>` 之前**：`.lbox` 是 `position: fixed`，必须挂在 `<body>` 直接子级；
+  一旦落在带 `transform` / `filter` 的祖先里，`fixed` 会退化成"相对该祖先定位"。
+- **四周留白**：`.lbox__img` 用 `max-width: min(1120px, 86vw)` + `max-height: 74vh`（移动端 `92vw` / `66vh`），
+  舞台 `padding: clamp(16px, 5vh, 60px) clamp(16px, 7vw, 96px)` ⇒ 1440×900 下大图约 1120×630，四周各留 160 / 117 px 以上。
+  取的是**原图**（`media.currentSrc || media.src`）+ `object-fit: contain`，不做二次裁切；足迹 10 张原图 1050~1400 px，缩到 1120 仍清晰。
+- **虚化底图**：`.lbox__backdrop` 铺满视口，`backdrop-filter: blur(24px) saturate(1.15)` + `rgba(4,11,21,.55)` 压暗
+  ⇒ 模糊的是"**此刻页面本身**"，不是一张固定背景图，所以滚到哪、模糊的就是哪一块。
+- **关闭**：右上角 `.lbox__close`（42px 圆形毛玻璃，`top/right: -14px` 略微探出图外）；
+  舞台 `.lbox__stage` 设 `pointer-events: none`、只让图片与叉 `auto` ⇒ **点大图周边空白会自然落到 backdrop 上**（关闭），
+  而**点大图本身什么也不会发生**（放大看细节时防误触，刻意设计）。
+- **滚动锁**：`html.lbox-open { overflow: hidden }`（只给 body 设 overflow 在部分浏览器无效），
+  并按 `innerWidth - clientWidth` 补 `padding-right`，避免锁上/解开时整页横向抖一下。
+- **无障碍**：容器 `role="dialog" aria-modal="true"`；打开时焦点移到关闭按钮，关闭后把焦点还给刚才那张照片；
+  `prefers-reduced-motion` 下取消过渡。
+- **提示光标**：`.ms-tile { cursor: zoom-in }`。
+
+**验证**（本环境无 node、无交互式浏览器，改用"真实页面副本 + 脚本触发 + `--dump-dom` 读真实 DOM"的方式）：
+
+| 检查项 | 结果 |
+| :--- | :--- |
+| 点照片 | `is-open` + 滚动锁生效；`src` = 被点那张原图（`03-hai.jpg`）；标题取自 `figcaption`（`海`） |
+| 按 Esc / 点周边空白 / 点右上角叉 | 三条路径均正确关闭并解锁 |
+| 点大图本身 | 保持打开（符合设计） |
+| 视觉 | 桌面 1440×900 / 移动 390×844：大图居中留白、圆角与投影、右上角圆形叉、下方说明文字，背景是被模糊的页面 |
+
+实拍见 `artifacts/screenshots/v3-lightbox-open-desktop.png` / `-mobile.png`（把足迹区顶进视口后触发真实点击所得）。
+
+**踩坑记录**：headless 截图在页面**发生过滚动**之后会拍出纯色空图（`window.scrollTo` 之后无论加不加 `?shot=1` 都一样），
+与灯箱本身无关；改用负 `margin-top` 把目标板块顶进视口（不用 `transform`，避免破坏 `position: fixed`）后拍摄正常。

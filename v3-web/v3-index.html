@@ -6,7 +6,7 @@
   <meta name="description" content="江沁钊的个人主页 —— 一个行走于山川湖海之间的观察者，用镜头记录每一帧美好。" />
   <title>江沁钊 · 行走于山川湖海的观察者</title>
   <!-- 版本号 ?v= 用于强制浏览器取新样式：改动 CSS 后请同步+1（避免旧样式被缓存导致"改了看不见"） -->
-  <link rel="stylesheet" href="v3-style.css?v=2" />
+  <link rel="stylesheet" href="v3-style.css?v=3" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -738,7 +738,23 @@
     </p>
   </footer>
 
-  <script src="v3-about-data.js?v=2"></script>
-  <script src="v3-script.js?v=2"></script>
+  <!-- ============ 照片放大预览（点击「山川湖海足迹」里的照片打开） ============
+       大图不铺满屏幕：四周留白，背后是"当前页面的虚化底图"；
+       右上角 × / 点击图片周边空白 / Esc 都能关闭。 -->
+  <div class="lbox" id="lbox" role="dialog" aria-modal="true" aria-label="照片预览">
+    <div class="lbox__backdrop" data-lbox-close></div>
+    <figure class="lbox__stage">
+      <img class="lbox__img" id="lboxImg" alt="" decoding="async" />
+      <button class="lbox__close" id="lboxClose" type="button" aria-label="关闭大图">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <figcaption class="lbox__cap">
+        <b id="lboxTitle"></b><span id="lboxDesc"></span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <script src="v3-about-data.js?v=3"></script>
+  <script src="v3-script.js?v=3"></script>
 </body>
 </html>
