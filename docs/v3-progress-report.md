@@ -84,12 +84,24 @@
 
 | 探测 | 结果 | 含义 |
 | :--- | :--- | :--- |
-| 匿名 `GET ?select=*` | `200 []` | 匿名可读（返回空表） |
-| 匿名 `POST {device, content}` | **`201`** | **匿名写入通道已打通**，RLS 已放行 insert |
+| 匿名 `POST {device, content}` + `Prefer: return=minimal` | **`201`** | **匿名写入通道已打通**（页面用的就是这一种） |
+| 匿名 `POST {device, content}` + `Prefer: return=representation` | `42501`<br>`new row violates row-level security policy` | 表上**只有 insert 策略、没有 select 策略**，而 `RETURNING` 要过 select 策略 → 报错 |
 | 匿名 `POST {name, device, content}` | `400 PGRST204`<br>`Could not find the 'name' column` | 表里**还缺 `name` 列** |
+| 匿名 `GET ?select=*` | `200 []` | **不代表表为空**（anon 没有 select 策略） |
+| 匿名 `DELETE` | `204` / `[]` | **一行也删不掉**（没有 delete 策略） |
 
-> 注：本轮开始时匿名 POST 曾被 RLS 拒绝（`42501 new row violates row-level security policy`），
-> 后经复测已返回 201 —— 以**当前实测**为准。
+> **关键澄清（本轮新增，推翻此前的"策略时好时坏"记录）**：
+> `42501` 与 `201` 的差别**不是** RLS 策略不稳定，而是**请求头 `Prefer` 不同**：
+> `return=minimal` 插入成功（`201`）；`return=representation` 需要 `RETURNING`，
+> 而 `RETURNING` 受 select 策略约束 → `42501`。
+> 页面用的正是 `return=minimal`（`v3-script.js` L1110），**所以访客提交完全不受影响**。
+>
+> **匿名读不到反馈是有意设计**：访客只能写，不能翻别人的反馈。
+> 要看数据请在 Supabase 控制台的 Table Editor / Dashboard 里看（那里用服务端身份，绕过 RLS）。
+> ⚠️ **不要给 anon 加 select 策略**来解决"读不到"的问题。
+>
+> ⚠️ 副作用：因为 anon 既无 select 也无 delete 权限，本轮排障时插入的测试行
+> **我删不掉也看不见**，需要你在 SQL Editor（owner 身份）里清理 → 见 §5 第 2 条。
 
 - 因此数据库侧**只差一步**：在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 的**第 1 步**
   （`alter table public.user_feedback add column if not exists name text;`）。
@@ -116,11 +128,52 @@
 
 截图产物（临时，位于 `.deepworks/tmp/`）：`v3-probe-shot.png`（桌面探针）、`v3-mobile-shot.png`（移动端）。
 
+### 4.1 端到端提交验证（真浏览器填表 → 真发请求 → 回读页面状态）
+
+上面那张表只证明"板块渲染出来了"，不证明"点了提交会怎样"。于是又写了探针页
+`.deepworks/tmp/fbsubmit.html`：在**同源 iframe 里真实填表 + `#fbSubmit.click()`**，再回读页面内部状态。
+其中 `?mock=ok` 模式会在请求体里**剥掉 `name` 字段**，用来模拟"补列之后"的表结构。
+
+| 场景 | 回读结果 | 结论 |
+| :--- | :--- | :--- |
+| 真实填表 | `count = 18 / 1000`（与所填内容字数完全一致） | 字数计数准确 |
+| 点提交（当前表结构） | `status.class = "fb__status is-err"`、颜色 `rgb(255,154,154)`、文案「没能提交成功（PGRST204）…欢迎直接发邮件给我」 | **失败路径可读、不白屏、不卡死** |
+| 同上 | `btn.disabled = false`、`draft kept = {"name":"端到端探针",…}` | 失败后**能重试**，且**草稿保住了**（不丢用户写的内容） |
+| `mock=ok`（模拟补列后） | `status.class = "fb__status is-ok"`、颜色 `rgb(110,231,168)`、文案「收到啦，谢谢你花时间写这些。」 | **成功路径正常**，绿字提示 |
+| 同上 | `draft kept = null`（`form.reset()` + 清草稿 + 设备恢复默认） | 成功后**清草稿并重置表单** |
+
+两个分支都验过了，所以"补上 `name` 列之后到底能不能用"这件事，**除列本身以外的环节已无悬念**。
+
+> 小提示：失败文案会把 PostgREST 的错误码（如 `PGRST204`）直接显示给访客。
+> 这是**故意保留**的（方便一眼看出是数据库问题）；若觉得太技术化，下一轮可改为
+> "稍后再试"并把错误码只写进 `console`。
+
 ---
 
 ## 5. 遗留 / 下一步
 
-1. **[待用户]** 执行 `v3-web/supabase-setup.sql` 第 1 步补 `name` 列 —— 完成后提交链路才真正可用；
-2. **[待做]** 用户补列后做一次**端到端提交**（浏览器里真实填表 → 表内应出现新行）；
-3. **[待做]** 本节完成后再 `git commit` 并打 tag `v3`；
-4. 课程 V3 的 **Dashboard** 部分（数据看板）尚未开始；抖音 / 视频号 链接（v2 遗留）仍未拿到。
+1. **[待用户 · 阻塞项]** 在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 的**第 1 步**
+   （`alter table public.user_feedback add column if not exists name text;`）。
+   **不补这一列，访客提交一定失败**（`400 PGRST204`）。
+2. **[待用户 · 清理测试数据]** 排障期间我往表里插入过测试行，而 anon 既没有 select 也没有 delete 权限，
+   **我删不掉也看不见**。请在 SQL Editor（owner 身份，绕过 RLS）里先看一眼、再清掉：
+
+   ```sql
+   -- ① 先看看表里到底有什么（包括我留下的测试行）
+   select id, contact, device, content, created_at
+     from public.user_feedback
+    order by created_at desc;
+   ```
+
+   ```sql
+   -- ② 确认后清掉测试行（也可以直接在 Table Editor 里勾选删除）
+   delete from public.user_feedback
+    where content in ('probe', 'probe-b')
+       or content like '%dw-probe-marker%'
+       or content like '%端到端测试%';
+   ```
+3. **[待做]** 用户补列后，我再跑一次**不带 `mock`** 的端到端提交，确认表内真的多出一行 →
+   然后 `git commit` 并打 tag `v3`。
+4. 课程 V3 的 **Dashboard**（数据看板）尚未开始 —— 它应当在 Supabase 控制台里做，
+   **不要**为了"能读到数据"而给 anon 加 select 策略。
+5. 抖音 / 视频号 链接（v2 遗留）仍未拿到。

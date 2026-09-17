@@ -148,9 +148,18 @@ docs/
 ```
 - Supabase：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`（现有 `id/contact/device/content/created_at` + **待补 `name`**）。
   publishable key 写在 `v3-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全边界由 RLS 负责）。
-- **实测状态（逐条验证）**：匿名 `GET ?select=*` 返回 `200 []`（可读）；匿名 `POST {device,content}` 返回 **`201`**（写入通道已打通）；
-  匿名 `POST {name,…}` 返回 `400 PGRST204 Could not find the 'name' column` → **只差补 `name` 列**。
-  ⚠️ 本轮开始时匿名 POST 曾被 RLS 拒（`42501`），复测已是 201 —— 以当前实测为准。
+- **实测状态（2026-09-17 复测，含一处重要更正）**：
+  - 匿名 `POST {device,content}` + `Prefer: return=minimal` → **`201`**（写入通道已打通，**页面用的就是这个**）；
+  - 匿名 `POST` + `Prefer: return=representation` → `42501 new row violates row-level security policy`
+    —— ⚠️ **不是策略不稳定，而是 `RETURNING` 要过 select 策略，而表上只有 insert 策略**（这个坑别再踩第二次）；
+  - 匿名 `GET ?select=*` → `200 []`：**不代表表为空**，而是 anon 没有 select 策略（**有意设计，别加**）；
+  - 匿名 `DELETE` → `204` / `[]`：**一行也删不掉**（没有 delete 策略）；
+  - 匿名 `POST {name,…}` → `400 PGRST204 Could not find the 'name' column` → **只差补 `name` 列**。
+- ⚠️ 因为 anon 既不能 select 也不能 delete，**排障时插入的测试行 agent 无法自行清理**，
+  必须在 SQL Editor（owner 身份）里清；现成 SQL 见 `docs/v3-progress-report.md` §5 第 2 条。
+- 端到端验证（真浏览器填表 + `#fbSubmit.click()` + 回读 `#fbStatus`）两个分支都过了：
+  失败 → `is-err` 红字「没能提交成功（PGRST204）…」+ 按钮解锁 + **草稿保住**；
+  成功（把 `name` 从请求体里剥掉模拟补列后）→ `is-ok` 绿字「收到啦…」+ 清草稿 + 重置表单。
 - 验证：headless Edge + iframe 探针页（`.deepworks/tmp/fbprobe.html`）读到 `html.class=[shot]`（主脚本在跑）、
   `#feedback offsetTop=8483 h=961 opacity=1`、`#fbForm h=493 display=grid visibility=visible`、
   `fbDevice.value=[电脑]`（**本轮新写的 IIFE 确实执行**）、`fbCount=[0 / 1000]`、`fbContent.placeholder` 长 52 字；
@@ -345,6 +354,7 @@ docs/
    - 关键改动后执行 `git add <具体文件>` + `git commit -m "vX: 一句说明本次优化点"`。
 5. **[进行中] 课程 V3**：Supabase Dashboard + Feedback。前端反馈板块已完成入库（`v3-web/`，见 §5 / §6.5）；
    待用户在 Supabase 控制台 → SQL Editor 执行 `v3-web/supabase-setup.sql` 补 `name` 列后，做一次端到端提交测试。
+   ⚠️ 另需用户在同一处**清理 agent 留下的测试行**（anon 无 select / delete 权限，详见 §6.5 与 v3 报告 §5）。
 6. 可选：继续微调山峦（`v2-web/tools/gen-bg-parallax.py` 的 `LAYERS` / `PALETTE`）。
 7. **[已完成] about-screen 下沿横向硬边**：真因是 `.about-screen__bg` 渐变的**末档 alpha 仍是 0.32**（实测桌面 52.96、移动 3.61/3.62），
    把**末档改为 0** 后 → 桌面 1.35 / 9.23→0.76 / 7.33→0.73、移动 1.22；同时校正判据为「**硬边 = 单行 STEP，连续陡坡 RAMP 不算缺陷**」，
