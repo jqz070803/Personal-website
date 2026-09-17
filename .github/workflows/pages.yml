@@ -1,0 +1,55 @@
+name: 部署网页到 GitHub Pages
+
+on:
+  # 每次推送到 main 就自动重新部署
+  push:
+    branches: [main]
+  # 也支持在 Actions 页面手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同时只跑一个部署，新的推送会取消排队中的旧任务
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出仓库
+        uses: actions/checkout@v4
+
+      - name: 组装站点（以 v3-web 作为网站根目录）
+        run: |
+          mkdir -p _site
+          cp -r v3-web/. _site/
+          mv _site/v3-index.html _site/index.html
+          echo "--- 站点根目录 ---"
+          ls -la _site
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+        with:
+          # 如果仓库还没开启 Pages，这里会尝试自动开启
+          enablement: true
+
+      - name: 打包站点
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布
+        id: deployment
+        uses: actions/deploy-pages@v4
