@@ -355,6 +355,14 @@ docs/
     结构与样式加在 `v3-index.html`（**必须放在两个 `<script>` 之前** —— `position: fixed` 落在带 `transform` 的祖先里会退化）
     与 `v3-style.css`；交互逻辑是 `v3-script.js` **末尾新增的独立 IIFE**（原有 11 个 IIFE 未改动）。资源版本 `?v=2 → ?v=3`。
     行为逐条实测 + 实拍 `artifacts/screenshots/v3-lightbox-open-desktop.png` / `-mobile.png`。详见 `docs/v3-progress-report.md` §7.2。
+  - **上线后增量 ③（2026-09-17，用户反馈）**：「山川湖海足迹」主标题下加一行**操作提示**引导点击看大图 ——
+    文案「点一下照片，可以看大图」+ 内联放大镜 SVG（`--accent`），做成 `.section__hint` 胶囊
+    （`--line` 细描边 + `rgba(77,163,255,.06)` 极淡底色）：上一行导语本身已是 `--ink-faint` 小字，
+    纯文字会糊在一起没人注意，胶囊能让人一眼看出这是"操作提示"而不是又一句抒情。
+    居中用 `display: flex` + `width: fit-content` + `margin: 16px auto 0`（**不要**依赖父级 `text-align` 去居中行内盒）。
+    底部原有的 `.journey-note`（"※ 以上均为我在旅途中的实拍…"）保留：一条在标题下管"怎么用"，一条在图片下管"是什么"。
+    资源版本 `?v=3 → ?v=4`。实拍 `artifacts/screenshots/v3-journey-hint-desktop.png` / `-mobile.png`。
+    详见 `docs/v3-progress-report.md` §7.3。
 - **下一版（文件版本 v4 = 课程 V4）**：数字孪生 / AI 集成（把 `#agent` 预留区变成真实可交互的 AI 助手）。
 - **其它待办**：抖音 / 视频号 主页链接（B站 已接入真实链接）；课程 V3 的 **Dashboard（数据看板）**部分尚未开始。
 
