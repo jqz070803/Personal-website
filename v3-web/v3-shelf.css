@@ -660,20 +660,41 @@
   margin-bottom: clamp(30px, 4.6vw, 60px);
   /* 板块左右的 24px 内边距已被归零，这里给标题块自己补回来，避免窄屏时文字贴边 */
   padding: 0 clamp(18px, 3.6vw, 40px);
+  /* 序号 / 大标题 / 副标题 / 提示句一律居中，共用同一条中轴线。
+     v3 原样式中 .section__head 本就有此值，这里再写死一次，杜绝被其他规则覆盖 */
+  text-align: center;
 }
 
-/* 「鼠标移到书脊上…」提示句：原来是 fit-content + auto margin（居中）；
-   改为与上方 lead 的左边缘对齐——lead 是 540px 的居中块，其左边缘即 (100% - 540px)/2 */
+/* 「鼠标移到书脊上…」提示句：与大标题、副标题一起居中
+   （本身是 fit-content 的药丸，左右 auto 外边距即为水平居中） */
 #shelf .section__hint {
-  margin-left: max(0px, calc((100% - 540px) / 2));
+  margin-left: auto;
   margin-right: auto;
+  text-align: center;
+}
+
+/* 「点击翻开相册」是引导读者动手的关键动作：加粗并略微加深，
+   让它从整句提示里跳出来；窄屏换成触屏文案时该标签会一并消失 */
+#shelf .section__hint strong {
+  font-weight: 700;
+  color: #1b2430;
+  /* 比周围的说明小字（0.82rem）放大约 16%：它是引导读者动手的核心动作 */
+  font-size: 1.16em;
 }
 
 /* 本板块是浅色「相册」质感（地图底色 #edf0f2），标题体系改用深色系，
    与 v3 其他深底浅字的板块形成有意的对比，同时保证文字清晰可读 */
 #shelf .section__index { color: #2f7fd0; }
 #shelf .section__title { color: #1b2430; }
-#shelf .section__lead  { color: rgba(28, 38, 52, 0.62); }
+/* 副标题「十六本书脊…」：显式固定为居中。
+   v3 原样式（.section__lead 540px + .section__head text-align:center）本已居中，
+   这里再写死左右外边距，确保与上方大标题、下方提示句严格共用同一中轴线 */
+#shelf .section__lead {
+  color: rgba(28, 38, 52, 0.62);
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
 #shelf .section__hint {
   color: rgba(28, 38, 52, 0.62);
   border-color: rgba(28, 38, 52, 0.14);

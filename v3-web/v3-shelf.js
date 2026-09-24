@@ -3,7 +3,7 @@
    来源：另一个工作区「书架地图照片集」的 photo-shelf/index.html（内联脚本）
    平移原则：逻辑原样保留，只做隔离改造，不改动源工作区任何文件。
    ----------------------------------------------------------------------------
-   隔离改造（仅 5 处，均不改变原有功能）：
+   隔离改造（仅 6 处，均不改变原有功能）：
      1) 整体包进 IIFE —— 原为顶层代码，其 const 会进入全局词法环境，与
         本页其他脚本的同名声明冲突；包起来后完全不外泄；
      2) window.CHINA_MAP 改为模块内局部变量（中国地图 SVG 坐标数据）；
@@ -671,12 +671,12 @@
 
   // 底栏提示：电脑讲鼠标、手机讲触屏（只在窄屏切换，桌面文案保持原样）
   const hintEl = document.querySelector("#shelf .section__hint span");
-  const HINT_DESK = hintEl ? hintEl.textContent.trim() : "";
+  const HINT_DESK = hintEl ? hintEl.innerHTML.trim() : "";
   const HINT_TOUCH = "点击书脊翻开相册 · 按住书脊左右拖动可调整顺序";
 
   function applyHint() {
     if (!hintEl) return;
-    hintEl.textContent = isNarrow() ? HINT_TOUCH : HINT_DESK;
+    hintEl.innerHTML = isNarrow() ? HINT_TOUCH : HINT_DESK;
   }
   applyHint();
   window.addEventListener("resize", applyHint);

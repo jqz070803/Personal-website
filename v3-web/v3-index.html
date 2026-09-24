@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="v3-style.css?v=4" />
   <!-- 「拍得 · 书架地图」板块样式：平移自另一工作区「书架地图照片集」，
        已做作用域隔离 —— 全部选择器限定在 #shelf / #shelf-layer 之下，不影响本页其他板块 -->
-  <link rel="stylesheet" href="v3-shelf.css?v=5" />
+  <link rel="stylesheet" href="v3-shelf.css?v=8" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -468,7 +468,7 @@
             <circle cx="12" cy="12" r="7.2" />
             <path d="M12 6.6v2.2M12 15.2v2.2M6.6 12h2.2M15.2 12h2.2" />
           </svg>
-          <span>鼠标移到书脊上地图会移向那一省，点击翻开相册 · 按住可左右拖动调整位置</span>
+          <span>鼠标移到书脊上地图会移向那一省，<strong>点击翻开相册</strong> · 按住可左右拖动调整位置</span>
         </p>
       </div>
 
@@ -840,6 +840,6 @@
   <script src="v3-about-data.js?v=4"></script>
   <script src="v3-script.js?v=4"></script>
   <!-- 「拍得 · 书架地图」交互逻辑（IIFE 隔离，内含中国地图 SVG 坐标数据） -->
-  <script src="v3-shelf.js?v=2"></script>
+  <script src="v3-shelf.js?v=3"></script>
 </body>
 </html>
