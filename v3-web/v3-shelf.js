@@ -672,7 +672,7 @@
   // 底栏提示：电脑讲鼠标、手机讲触屏（只在窄屏切换，桌面文案保持原样）
   const hintEl = document.querySelector("#shelf .section__hint span");
   const HINT_DESK = hintEl ? hintEl.innerHTML.trim() : "";
-  const HINT_TOUCH = "<strong>点击书脊翻开相册</strong> · 按住书脊左右拖动可调整顺序";
+  const HINT_TOUCH = "<strong>轻点书脊翻开相册</strong> · 按住书脊左右拖动可调整顺序";
 
   function applyHint() {
     if (!hintEl) return;
