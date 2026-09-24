@@ -1,0 +1,681 @@
+/* ============================================================================
+   v3-shelf.css —— 「拍得 · 书架地图」板块
+   来源：另一个工作区「书架地图照片集」的 photo-shelf/index.html（内联样式）
+   平移原则：原样照搬 + 作用域隔离，不改动源工作区任何文件。
+   ----------------------------------------------------------------------------
+   作用域：
+     · #shelf        → 板块主体（氛围光 + 中国地图背景层 + 书架 + 底栏）
+     · #shelf-layer  → 相册浮层 + 大图灯箱（挂在 body 级，保证 position:fixed 生效）
+   隔离要点：
+     1) 所有选择器均加 #shelf / #shelf-layer 前缀，不影响本页任何其他板块；
+     2) 原 html,body 的全局样式改为容器样式，不再作用于整页；
+     3) 地图背景层与氛围光由 fixed 改 absolute，限定在板块内（随页面滚动）；
+     4) 相册 / 大图灯箱保留 fixed 全屏弹出，层级分别为 120 / 150（导航为 100）。
+   ============================================================================ */
+
+#shelf {
+  position: relative;
+  z-index: 1;              /* 独立层叠上下文：内部层级不外溢；不创建包含块，不影响浮层 fixed */
+  overflow: hidden;        /* 让地图背景与书架在板块内合成一张完整的「相册卡片」 */
+  border-radius: calc(var(--radius) + 8px);
+  border: 1px solid var(--line);
+}
+#shelf-layer {
+  position: static;        /* 仅作作用域根，零占位，不参与布局 */
+}
+
+/* ============ 基础 ============ */#shelf *, #shelf-layer *{ box-sizing: border-box; margin: 0; padding: 0; }#shelf{ height: 100%; }#shelf{
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #2c3238;
+    background: #edf0f2; }/* 浅灰 + 轻盈氛围光（衬托中国地图背景） */#shelf::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(1100px 640px at 50% 0%, rgba(255,255,255,.70), rgba(255,255,255,0) 60%),
+      radial-gradient(900px 600px at 100% 100%, rgba(150,178,205,.14), rgba(150,178,205,0) 58%),
+      radial-gradient(900px 600px at 0% 100%, rgba(130,158,188,.12), rgba(130,158,188,0) 58%);
+  }/* ============ 中国地图背景层（浅色） ============ */#shelf .map-wrap{
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }#shelf #mapSvg{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #edf0f2;
+  }#shelf #mapSvg path.province{
+    fill: #f6f8fa;
+    stroke: #d3dae2;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    transition: fill .18s ease;
+  }#shelf #mapSvg path.province:hover{ fill: #e8eef4; }#shelf #mapSvg path.province.visited{ fill: #e9f0f7; stroke: #aec2d4; }#shelf #mapSvg path.province.visited:hover{ fill: #d8e6f2; }#shelf #mapSvg path.ninedash{
+    fill: none;
+    stroke: #8fa3b5;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }/* ============ 页面骨架 ============ */#shelf .stage{
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(20px, 3.6vw, 46px) clamp(20px, 4.5vw, 84px) clamp(22px, 3.4vh, 48px);
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }/* ---------- 顶栏：左标题 + 右角注 ---------- */#shelf .masthead{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    padding-bottom: clamp(14px, 2.2vw, 24px);
+    border-bottom: 1px solid rgba(40,60,80,.10);
+    margin-bottom: clamp(20px, 3.2vh, 42px);
+  }#shelf .brand{ min-width: 0; }#shelf .brand .kicker{
+    font-size: clamp(10px, 1.3vw, 13px);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: rgba(44,50,56,.5);
+    margin-bottom: 10px;
+  }#shelf .brand h1{
+    font-family: "Helvetica Neue", "Arial", "PingFang SC", sans-serif;
+    font-size: clamp(26px, 4.6vw, 52px);
+    font-weight: 800;
+    letter-spacing: 8px;
+    line-height: 1.05;
+    color: #232a31;
+  }#shelf .brand .sub{
+    margin-top: 12px;
+    font-size: clamp(11px, 1.4vw, 14px);
+    letter-spacing: 3px;
+    color: rgba(44,50,56,.62);
+  }#shelf .corner{
+    flex: 0 0 auto;
+    text-align: right;
+    font-size: clamp(10px, 1.2vw, 12px);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(44,50,56,.56);
+    line-height: 2;
+    white-space: nowrap;
+  }#shelf .corner b{ color: #232a31; font-weight: 600; }#shelf .corner .zh{ letter-spacing: 2px; }/* ============ 书架 ============ */#shelf .shelf{
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }#shelf .books-row{
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(3px, 0.7vw, 10px);
+    padding: 0 clamp(14px, 2.5vw, 44px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: clamp(210px, 34vh, 300px);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(60,80,100,.22) transparent;
+  }#shelf .books-row::-webkit-scrollbar{ height: 6px; }#shelf .books-row::-webkit-scrollbar-thumb{ background: rgba(60,80,100,.2); border-radius: 6px; }/* ============ 单本书（薄书脊） ============ */#shelf .book{
+    pointer-events: auto;
+    flex: none;
+    width: var(--bw);
+    --bw: clamp(26px, 2.8vw, 34px);
+    position: relative;
+    height: var(--h, 250px);
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    transition: transform .4s cubic-bezier(.2,.8,.25,1);
+    transform-origin: 50% 100%;
+    will-change: transform;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }#shelf .spine{
+    position: absolute;
+    inset: 0;
+    border-radius: 3px 4px 4px 3px;
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--c) 16%, #fff 84%) 0%,
+        color-mix(in srgb, var(--c) 9%, #fff 91%) 22%,
+        color-mix(in srgb, var(--c) 6%, #fff 94%) 55%,
+        color-mix(in srgb, var(--c) 18%, #fff 82%) 100%
+      );
+    box-shadow: inset 0 0 0 1px rgba(40,60,80,.08), inset 0 -2px 0 rgba(255,255,255,.5);
+    overflow: hidden;
+  }/* 书脊顶部醒目色带（档案标签），底部渐深 */#shelf .spine-head{
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: clamp(18px, 3.2vh, 30px);
+    background: var(--decor, color-mix(in srgb, var(--c) 70%, #fff 30%));
+    z-index: 2;
+  }#shelf .spine-foot{
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: clamp(14px, 2.5vh, 24px);
+    background: color-mix(in srgb, var(--c) 30%, #fff 70%);
+    z-index: 2;
+  }/* 中缝高光 */#shelf .spine::after{
+    content: "";
+    position: absolute;
+    top: 8px; bottom: 8px;
+    left: 2px;
+    width: 1px;
+    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.55) 45%, rgba(255,255,255,0));
+    z-index: 3;
+  }/* ============ 每本书脊的专属装饰（变体 v1~v7） ============ *//* 装饰元素默认隐藏，由 .spine.vX 变体逐个点亮，形成不同设计纹样 */#shelf .spine-band, #shelf .spine-tile, #shelf .spine-dot, #shelf .spine-seal{
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+  }/* v1 顶部细双线带（订书线质感） */#shelf .spine.v1 .spine-band{
+    opacity: .85;
+    top: 30%;
+    left: 5px; right: 5px;
+    height: 6px;
+    background: linear-gradient(180deg,
+      transparent 0 1px, var(--accent) 1px 3px,
+      transparent 3px 4px, var(--accent) 4px 6px, transparent 6px);
+  }/* v2 底部色块（印章签条） */#shelf .spine.v2 .spine-tile{
+    opacity: .9;
+    bottom: 30%;
+    left: 5px; right: 5px;
+    height: 11px;
+    background: var(--accent);
+    border-radius: 1px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+  }/* v3 顶部圆点徽章 */#shelf .spine.v3 .spine-dot{
+    opacity: .95;
+    top: 27%;
+    right: 5px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.14);
+  }/* v4 腰封粗带 */#shelf .spine.v4 .spine-seal{
+    opacity: .92;
+    top: 54%;
+    left: 0; right: 0;
+    height: clamp(8px, 1.7vh, 15px);
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--accent) 85%, #000 15%) 0%,
+      var(--accent) 50%,
+      color-mix(in srgb, var(--accent) 85%, #000 15%) 100%);
+  }/* v5 斜纹质感（低对比肌理） */#shelf .spine.v5::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: repeating-linear-gradient(45deg,
+      rgba(255,255,255,.055) 0 2px, transparent 2px 6px);
+    pointer-events: none;
+  }/* v6 顶部细带 + 底部圆点（双点题） */#shelf .spine.v6 .spine-band{
+    opacity: .85;
+    top: 30%;
+    left: 5px; right: 5px;
+    height: 3px;
+    background: var(--accent);
+  }#shelf .spine.v6 .spine-dot{
+    opacity: .95;
+    bottom: 31%;
+    right: 5px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.14);
+  }/* v7 中缝竖烫印条（简约） */#shelf .spine.v7 .spine-tile{
+    opacity: .9;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 34%;
+    background: var(--accent);
+    border-radius: 1px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+  }/* 每本书的插画：完整、具体、居中、不变形（丰富书脊内容，不做半截裁切） */#shelf .spine-art{
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    opacity: .97;
+    top: clamp(30px, 6.5vh, 46px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(24px, 2.8vw, 33px);
+    height: clamp(34px, 6vh, 44px);
+  }#shelf .spine-art svg{ width: 100%; height: 100%; display: block; }#shelf .spine-inner{
+    position: absolute;
+    inset: clamp(52px, 10vh, 62px) 6px clamp(18px, 3.4vh, 26px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.2vh, 10px);
+    z-index: 4;
+    color: var(--tc, #fff);
+  }/* 拼音档案标签（顶部小字） */#shelf .spine-code{
+    color: var(--tc, #2c2620);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(6.5px, 0.8vw, 9px);
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    opacity: .78;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }/* 书名：中文竖排大字 */#shelf .spine-title{
+    color: var(--tc, #2c2620);
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: clamp(13px, 1.9vw, 18px);
+    font-weight: 700;
+    letter-spacing: clamp(2px, 0.5vw, 4px);
+    line-height: 1.6;
+    white-space: nowrap;
+    max-height: 76%;
+    overflow: hidden;
+  }#shelf .spine-num{
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(7px, 0.85vw, 10px);
+    letter-spacing: 1px;
+    opacity: .7;
+    writing-mode: vertical-rl;
+  }/* ============ 悬停 / 选中交互 ============ */#shelf .book:hover, #shelf .book:focus-visible{
+    transform: translateY(-18px) rotate(4deg);
+    transform-origin: 50% 100%;
+    z-index: 30;
+  }#shelf .book:hover .spine, #shelf .book:focus-visible .spine{
+    box-shadow:
+      inset 0 -14px 0 rgba(60,80,100,.10),
+      inset 1px 0 0 rgba(255,255,255,.5),
+      0 24px 44px rgba(40,60,80,.30);
+  }#shelf .book:hover ~ .book{ transform: translateX(32px); }#shelf .book:has(~ .book:hover){ transform: translateX(-32px); }/* 拖拽状态：其他书平滑让位，被拖的书抬升 */#shelf .books-row.dragging .book{ transition: transform .32s cubic-bezier(.2,.8,.25,1); }#shelf .books-row.dragging .book.drag-active{
+    transition: none;
+    z-index: 40;
+  }#shelf .book.drag-active .spine{
+    box-shadow: 0 28px 54px rgba(40,60,80,.4), inset 0 0 0 1px rgba(255,255,255,.5);
+  }/* ============ 底栏：大数字 + 提示 ============ */#shelf .footbar{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-top: clamp(20px, 3.4vh, 40px);
+    border-top: 1px solid rgba(40,60,80,.10);
+    padding-top: clamp(14px, 1.8vw, 22px);
+  }#shelf .vol-num{
+    display: flex;
+    align-items: baseline;
+    gap: clamp(10px, 1.6vw, 20px);
+    color: #232a31;
+  }#shelf .vol-num b{
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(34px, 5vw, 60px);
+    font-weight: 800;
+    letter-spacing: 2px;
+    line-height: 1;
+  }#shelf .vol-num .vol-caption{
+    font-size: clamp(10px, 1.2vw, 13px);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(44,50,56,.55);
+    line-height: 1.7;
+  }#shelf .footbar .hint{
+    text-align: right;
+    font-size: clamp(11px, 1.4vw, 13px);
+    letter-spacing: 2px;
+    color: rgba(44,50,56,.6);
+    max-width: 46%;
+  }/* ============ 相册灯箱 ============ */#shelf-layer .album-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(230,235,240,.75);
+    backdrop-filter: blur(8px);
+  }#shelf-layer .album-overlay.open{ display: flex; }#shelf-layer .album-panel{
+    width: min(960px, 96vw);
+    max-height: 90vh;
+    background: #ffffff;
+    border: 1px solid rgba(40,60,80,.10);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,.75);
+    display: flex;
+    flex-direction: column;
+    animation: pop .32s cubic-bezier(.2,.8,.25,1);
+  }
+  @keyframes pop {
+    from { transform: translateY(18px) scale(.97); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }#shelf-layer .album-head{
+    padding: 20px 26px 16px;
+    border-bottom: 1px solid rgba(40,60,80,.10);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }#shelf-layer .album-head h2{
+    font-size: clamp(20px, 3vw, 26px);
+    color: #232a31;
+    letter-spacing: 3px;
+    font-weight: 700;
+  }#shelf-layer .album-head p{
+    margin-top: 5px;
+    font-size: 13px;
+    color: rgba(44,50,56,.6);
+    letter-spacing: 1px;
+  }#shelf-layer .album-close{
+    border: none;
+    background: rgba(40,60,80,.06);
+    color: #4a5b6b;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    transition: background .2s, transform .2s;
+  }#shelf-layer .album-close:hover{ background: rgba(40,60,80,.14); transform: rotate(90deg); }#shelf-layer .album-body{
+    flex: 1;
+    overflow: hidden;
+    padding: 20px 26px 26px;
+    display: flex;
+    align-items: stretch;
+    gap: 26px;
+  }#shelf-layer .fan-area{
+    flex: 1 1 55%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+  }#shelf-layer .text-area{
+    flex: 1 1 45%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: clamp(24px, 7vh, 82px);
+    padding-right: clamp(2px, 1vw, 14px);
+  }/* ============ 照片名称 + 地点文案（随照片切换渐显渐隐） ============ */#shelf-layer .cap-block{
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .46s ease, transform .5s cubic-bezier(.2,.8,.25,1);
+    will-change: opacity, transform;
+  }#shelf-layer .cap-block.show{ opacity: 1; transform: translateY(0); }#shelf-layer .cap-kicker{
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(9.5px, 1.05vw, 11px);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(44,50,56,.42);
+    margin-bottom: clamp(10px, 1.8vh, 16px);
+  }#shelf-layer .cap-title{
+    font-size: clamp(23px, 2.5vw, 33px);
+    font-weight: 700;
+    letter-spacing: 4px;
+    line-height: 1.3;
+    color: #232a31;
+  }#shelf-layer .cap-title::after{
+    content: "";
+    display: block;
+    width: 46px;
+    height: 1px;
+    margin-top: clamp(12px, 2vh, 18px);
+    background: rgba(40,60,80,.26);
+  }#shelf-layer .cap-desc{
+    margin-top: clamp(12px, 2vh, 18px);
+    font-size: clamp(12px, 1.12vw, 14px);
+    font-weight: 300;
+    line-height: 2.05;
+    letter-spacing: .7px;
+    color: rgba(44,50,56,.70);
+    max-width: 32em;
+  }#shelf-layer .fan-stage{
+    position: relative;
+    width: 440px;
+    height: 640px;
+    transform: translate(var(--fan-shift, 0px, 0px)) scale(var(--fan-scale, 1));
+    transform-origin: center center;
+  }#shelf-layer .photo-card{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 272px;
+    height: 374px;
+    margin-left: -136px;
+    margin-top: -187px;
+    border-radius: 17px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(160deg, var(--p1), var(--p2));
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 18px 38px rgba(30,40,55,.32), inset 0 0 0 1px rgba(255,255,255,.10);
+    will-change: transform;
+    transform-origin: 50% 50%;
+    backface-visibility: hidden;
+  }#shelf-layer .photo-card::after{
+    content: "";
+    position: absolute; inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.30));
+  }/* 真实照片卡：照片等比放大铺满整张卡片（超出部分居中裁切），点击可看大图 */#shelf-layer .photo-card.has-photo{
+    padding: 0;
+    background: #141821;
+    cursor: zoom-in;
+  }#shelf-layer .photo-card.has-photo::after{
+    background: linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,0) 34%, rgba(0,0,0,.34));
+  }#shelf-layer .photo-card .photo-img{
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }#shelf-layer .photo-card .idx{
+    position: absolute;
+    top: 14px; left: 16px;
+    font-size: 14px;
+    opacity: .85;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    z-index: 2;
+    letter-spacing: 1px;
+  }/* ============ 大图查看（点击照片弹出，层级高于相册灯箱） ============ */#shelf-layer .lightbox{
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 46px 40px 24px;
+    background: rgba(12,15,20,.93);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .26s ease;
+  }#shelf-layer .lightbox.open{ opacity: 1; pointer-events: auto; cursor: zoom-out; }#shelf-layer .lightbox-img{
+    max-width: min(1200px, 92vw);
+    max-height: 76vh;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 30px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.12);
+    transform: scale(.96);
+    transition: transform .32s cubic-bezier(.2,.8,.25,1);
+    user-select: none;
+    -webkit-user-drag: none;
+  }#shelf-layer .lightbox.open .lightbox-img{ transform: scale(1); }#shelf-layer .lightbox-cap{
+    color: rgba(255,255,255,.84);
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 2px;
+  }#shelf-layer .lightbox-hint{
+    color: rgba(255,255,255,.40);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }#shelf-layer .lightbox-close{
+    position: absolute;
+    top: 20px; right: 24px;
+    width: 42px; height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,.10);
+    color: #fff;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+  }#shelf-layer .lightbox-close:hover{ background: rgba(255,255,255,.22); transform: rotate(90deg); }#shelf-layer .album-foot{
+    padding: 13px 26px;
+    border-top: 1px solid rgba(40,60,80,.10);
+    font-size: 12px;
+    color: rgba(44,50,56,.55);
+    letter-spacing: 1px;
+    text-align: center;
+  }
+
+  /* 窄屏（手机）：相册改为「照片在上、文字在下」的上下堆叠，翻动交给触屏左右滑动 */
+  @media (max-width: 760px) {#shelf-layer .album-overlay{ padding: 10px; }#shelf-layer .album-panel{ width: 100%; max-height: 94vh; }#shelf-layer .album-head{ padding: 14px 16px 10px; gap: 10px; }#shelf-layer .album-head h2{ letter-spacing: 2px; }#shelf-layer .album-body{
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 16px 12px;
+      overflow: hidden;
+    }/* 上：照片区占据剩余高度；手势由脚本接管，不触发浏览器滚动/侧滑返回 */#shelf-layer .fan-area{
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      touch-action: none;
+    }/* 下：文案区固定高度，随照片切换渐显；内容过长时自身纵向滚动 */#shelf-layer .text-area{
+      flex: 0 0 auto;
+      height: clamp(150px, 27vh, 205px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 0;
+      touch-action: pan-y;
+    }#shelf-layer .album-foot{ padding: 10px 14px; font-size: 11px; }#shelf-layer .lightbox{ padding: 40px 14px 18px; }#shelf-layer .lightbox-img{ max-width: 96vw; max-height: 66vh; }/* 首页底栏：整体往下压，和上方的书脊拉开距离，横向滑动时不容易蹭到书 */#shelf .stage{ padding-bottom: 14px; }#shelf .footbar{ margin-top: clamp(36px, 7vh, 68px); }/* 书架横向拉动条：加厚 + 与书脊留出空隙，手机上更好按住拖动 */#shelf .books-row{
+      padding-bottom: 10px;
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }#shelf .books-row::-webkit-scrollbar{ height: 18px; }#shelf .books-row::-webkit-scrollbar-track{ background: transparent; }#shelf .books-row::-webkit-scrollbar-thumb{
+      background: rgba(60, 80, 100, .3);
+      border-radius: 9px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+  }
+
+  /* 特别矮的屏（<=620px 高，如 320x568）收紧间距，别让底栏掉到屏幕外 */
+  @media (max-width: 760px) and (max-height: 620px) {#shelf .stage{ padding-bottom: 8px; }#shelf .footbar{ margin-top: 22px; }#shelf .books-row{ padding-bottom: 8px; }
+  }
+
+  /* 触屏设备没有悬停：禁用「鼠标划过书脊」的位移，避免点完一本书后书架歪着不走 */
+  @media (hover: none) {#shelf .book:hover{ transform: none; }#shelf .book:hover ~ .book{ transform: none; }#shelf .book:has(~ .book:hover){ transform: none; }
+  }
+
+  /* ============ 移动端适配 ============ */
+  @media (max-width: 640px) {#shelf .masthead{ flex-direction: column; }#shelf .corner{ text-align: left; white-space: normal; }#shelf .footbar{ flex-direction: column; align-items: flex-start; }#shelf .footbar .hint{ text-align: left; max-width: 100%; }#shelf .book{ --bw: 38px; }#shelf .books-row{ justify-content: flex-start; }
+  }
+
+/* ============================================================================
+   与本页 v3 版式的对接适配
+   —— 只覆盖必需的几项，避免与 .section 的内边距 / 配色叠加冲突
+   ============================================================================ */
+
+/* 本页 .section 默认 max-width:1080px、左右各留 24px 内边距；对「整屏中国地图 + 一排书架」
+   来说横向太挤。这里解除限制，两翼只留一点边距，基本铺满屏幕 */
+#shelf {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: clamp(8px, 1.1vw, 22px);
+  margin-right: clamp(8px, 1.1vw, 22px);
+}
+
+/* 同理：相册面板原本最大 960px，扇形照片墙横向空间不足，放宽一档（内部为弹性布局，自动适应）。
+   只在桌面宽度生效，移动端仍沿用「满宽 + 照片在上下文字在下」的原有布局 */
+@media (min-width: 761px) {
+  #shelf-layer .album-panel {
+    width: min(1400px, 94vw);
+  }
+}
+
+/* 本页 .section 已有 72~128px 上下内边距、1080px 最大宽度且水平居中；
+   这里收掉 .stage 的左右内边距与 100vh 满屏高度，避免两层边距叠加、板块过长 */
+#shelf .stage {
+  min-height: min(80vh, 720px);
+  padding: 0 0 clamp(22px, 3.4vh, 48px);
+}
+
+/* 底栏排版：原设计是「左册数 / 右提示」两端对齐；这里改为整体左对齐的上下两行——
+   上面是册数（大数字 + 说明文字），下面是操作提示，视觉重心统一收在左侧 */
+#shelf .footbar {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: clamp(12px, 1.8vh, 22px);
+  /* 整体右缩进，与板块左边框拉开距离 */
+  padding-left: clamp(20px, 3vw, 56px);
+  padding-right: clamp(20px, 3vw, 56px);
+}
+
+/* 大数字与「Volumes Collected」按底边对齐；原为基线对齐，字号悬殊时看起来像错位 */
+#shelf .vol-num {
+  align-items: flex-end;
+}
+
+/* 提示文字改为左起排布，不再限定 46% 宽度挤在右侧 */
+#shelf .footbar .hint {
+  text-align: left;
+  max-width: 100%;
+}
+
+#shelf .vol-caption {
+  line-height: 1.35;
+}
+
+/* 板块内的地图背景层是定位元素（z-index:0），而标题块是普通流元素；
+   普通流内容在层叠顺序上低于定位元素，会被地图底色整块盖住，故提升层级 */
+#shelf .section__head {
+  position: relative;
+  z-index: 2;
+  margin-bottom: clamp(30px, 4.6vw, 60px);
+  /* 板块左右的 24px 内边距已被归零，这里给标题块自己补回来，避免窄屏时文字贴边 */
+  padding: 0 clamp(18px, 3.6vw, 40px);
+}
+
+/* 「鼠标移到书脊上…」提示句：原来是 fit-content + auto margin（居中）；
+   改为与上方 lead 的左边缘对齐——lead 是 540px 的居中块，其左边缘即 (100% - 540px)/2 */
+#shelf .section__hint {
+  margin-left: max(0px, calc((100% - 540px) / 2));
+  margin-right: auto;
+}
+
+/* 本板块是浅色「相册」质感（地图底色 #edf0f2），标题体系改用深色系，
+   与 v3 其他深底浅字的板块形成有意的对比，同时保证文字清晰可读 */
+#shelf .section__index { color: #2f7fd0; }
+#shelf .section__title { color: #1b2430; }
+#shelf .section__lead  { color: rgba(28, 38, 52, 0.62); }
+#shelf .section__hint {
+  color: rgba(28, 38, 52, 0.62);
+  border-color: rgba(28, 38, 52, 0.14);
+  background: rgba(47, 127, 208, 0.07);
+}

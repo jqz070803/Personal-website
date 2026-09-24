@@ -7,6 +7,9 @@
   <title>江沁钊 · 行走于山川湖海的观察者</title>
   <!-- 版本号 ?v= 用于强制浏览器取新样式：改动 CSS 后请同步+1（避免旧样式被缓存导致"改了看不见"） -->
   <link rel="stylesheet" href="v3-style.css?v=4" />
+  <!-- 「拍得 · 书架地图」板块样式：平移自另一工作区「书架地图照片集」，
+       已做作用域隔离 —— 全部选择器限定在 #shelf / #shelf-layer 之下，不影响本页其他板块 -->
+  <link rel="stylesheet" href="v3-shelf.css?v=5" />
 </head>
 <body>
   <!-- ============ 顶部导航 ============ -->
@@ -15,6 +18,7 @@
       <a class="nav__link" href="#about">关于</a>
       <a class="nav__link" href="#study">学业</a>
       <a class="nav__link" href="#journey">足迹</a>
+      <a class="nav__link" href="#shelf">书架</a>
       <a class="nav__link" href="#lens">镜头</a>
       <a class="nav__link" href="#skills">技能</a>
       <a class="nav__link" href="#social">社交</a>
@@ -453,6 +457,41 @@
       <p class="journey-note reveal">※ 以上均为我在旅途中的实拍，会随足迹持续更新。</p>
     </section>
 
+    <!-- ============ 拍得 · 书架地图（源自另一工作区「书架地图照片集」；原样平移 + 作用域隔离） ============ -->
+    <section class="section" id="shelf">
+      <div class="section__head reveal">
+        <span class="section__index">03B</span>
+        <h2 class="section__title" data-write>拍得 · 书架地图</h2>
+        <p class="section__lead">十六本书脊，一张中国地图，一本旅途中的私人相册。</p>
+        <p class="section__hint">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <circle cx="12" cy="12" r="7.2" />
+            <path d="M12 6.6v2.2M12 15.2v2.2M6.6 12h2.2M15.2 12h2.2" />
+          </svg>
+          <span>鼠标移到书脊上地图会移向那一省，点击翻开相册 · 按住可左右拖动调整位置</span>
+        </p>
+      </div>
+
+      <!-- 中国地图背景层（原为全屏 fixed 背景，此处改为板块内的 absolute 背景，随页面滚动） -->
+      <div class="map-wrap" aria-hidden="true">
+        <svg id="mapSvg" viewBox="0 0 1000 814.5" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <!-- 书架 + 底栏（原 masthead 大标题已省略：标题统一由上方 section 头承担） -->
+      <div class="stage">
+        <section class="shelf" aria-label="足迹书架">
+          <div class="books-row" id="booksRow"></div>
+        </section>
+
+        <div class="footbar">
+          <div class="vol-num">
+            <b id="volCount">16</b>
+            <span class="vol-caption">Volumes<br />Collected</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ 镜头世界 ============ -->
     <section class="section" id="lens">
       <div class="section__head reveal">
@@ -746,6 +785,42 @@
     </p>
   </footer>
 
+  <!-- ============ 「拍得 · 书架地图」的相册浮层与大图灯箱 ============
+       挂在 body 级（而非板块内部）：板块用了 overflow/border-radius 做圆角卡片，
+       会裁剪并改变内部 fixed 元素的包含块；放在这里才能正常全屏弹出。
+       层级：相册 120、大图 150，均高于导航（100）。 -->
+  <div id="shelf-layer">
+    <div class="album-overlay" id="albumOverlay" role="dialog" aria-modal="true">
+      <div class="album-panel">
+        <div class="album-head">
+          <div>
+            <h2 id="albumTitle"></h2>
+            <p id="albumMeta"></p>
+          </div>
+          <button class="album-close" id="albumClose" aria-label="关闭">✕</button>
+        </div>
+        <div class="album-body">
+          <div class="fan-area"><div class="fan-stage" id="fanStage"></div></div>
+          <div class="text-area" id="textArea">
+            <div class="cap-block" id="capBlock">
+              <div class="cap-kicker" id="capKicker"></div>
+              <h3 class="cap-title" id="capTitle"></h3>
+              <p class="cap-desc" id="capDesc"></p>
+            </div>
+          </div>
+        </div>
+        <div class="album-foot" id="albumFoot"></div>
+      </div>
+    </div>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+      <button class="lightbox-close" id="lightboxClose" aria-label="关闭大图">✕</button>
+      <img class="lightbox-img" id="lightboxImg" alt="" draggable="false" />
+      <div class="lightbox-cap" id="lightboxCap"></div>
+      <div class="lightbox-hint">点击任意处或按 Esc 关闭</div>
+    </div>
+  </div>
+
   <!-- ============ 照片放大预览（点击「山川湖海足迹」里的照片打开） ============
        大图不铺满屏幕：四周留白，背后是"当前页面的虚化底图"；
        右上角 × / 点击图片周边空白 / Esc 都能关闭。 -->
@@ -764,5 +839,7 @@
 
   <script src="v3-about-data.js?v=4"></script>
   <script src="v3-script.js?v=4"></script>
+  <!-- 「拍得 · 书架地图」交互逻辑（IIFE 隔离，内含中国地图 SVG 坐标数据） -->
+  <script src="v3-shelf.js?v=2"></script>
 </body>
 </html>
