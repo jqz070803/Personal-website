@@ -3,7 +3,7 @@
    来源：另一个工作区「书架地图照片集」的 photo-shelf/index.html（内联脚本）
    平移原则：逻辑原样保留，只做隔离改造，不改动源工作区任何文件。
    ----------------------------------------------------------------------------
-   隔离改造（仅 6 处，均不改变原有功能）：
+   隔离改造（仅 7 处，均不改变原有功能）：
      1) 整体包进 IIFE —— 原为顶层代码，其 const 会进入全局词法环境，与
         本页其他脚本的同名声明冲突；包起来后完全不外泄；
      2) window.CHINA_MAP 改为模块内局部变量（中国地图 SVG 坐标数据）；
@@ -1064,9 +1064,12 @@
     metaEl.textContent = "收录于《我的足迹》 · " + a.photos.length + " 张";
     // 提示语随输入方式切换：电脑=鼠标滚轮上下，手机=触屏左右滑动
     const tip = isNarrow() ? "左右滑动切换照片" : "鼠标滚轮上下滑动查看不同照片";
-    footEl.textContent = a.photos.some((p) => p.src)
-      ? tip + " · 点击照片即可查看大图"
-      : tip;
+    // 【平移改造】有照片时：操作提示加粗 + 点击看大图；空相册时没有照片可翻，
+    // 底栏只留一句引导语，成为该行唯一内容
+    const hasPhoto = a.photos.some((p) => p.src);
+    footEl.innerHTML = hasPhoto
+      ? "<strong>" + tip + "</strong> · 点击照片即可查看大图"
+      : "<strong>你可以先看看其他的相册</strong>";
 
     fanStage.innerHTML = a.photos.map((p, i) => `
       <div class="photo-card${p.src ? " has-photo" : ""}" style="--p1:${p.p1 || shade(a.c, -55 - i * 4)};--p2:${p.p2 || shade(a.c, 30 + i * 6)}">

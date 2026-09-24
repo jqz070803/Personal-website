@@ -682,6 +682,13 @@
   font-size: 1.16em;
 }
 
+/* 相册底栏：操作提示加粗突出。空相册时这句引导语就是底栏唯一的内容，
+   同样走 strong 样式，避免只剩一行浅灰小字看起来像没渲染出来 */
+#shelf-layer .album-foot strong {
+  font-weight: 700;
+  color: rgba(30, 42, 56, 0.85);
+}
+
 /* 本板块是浅色「相册」质感（地图底色 #edf0f2），标题体系改用深色系，
    与 v3 其他深底浅字的板块形成有意的对比，同时保证文字清晰可读 */
 #shelf .section__index { color: #2f7fd0; }
