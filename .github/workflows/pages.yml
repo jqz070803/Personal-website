@@ -24,11 +24,13 @@ jobs:
       - name: 取出仓库
         uses: actions/checkout@v4
 
-      - name: 组装站点（以 v3-web 作为网站根目录）
+      - name: 组装站点（以 v4-web 作为网站根目录）
         run: |
           mkdir -p _site
-          cp -r v3-web/. _site/
-          mv _site/v3-index.html _site/index.html
+          cp -r v4-web/. _site/
+          # 只发布页面本身；代理源码、测试脚本、数据库脚本不进站点目录
+          rm -rf _site/tools _site/server _site/worker _site/qa-dataset.json _site/supabase-setup.sql
+          mv _site/v4-index.html _site/index.html
           echo "--- 站点根目录 ---"
           ls -la _site
 
