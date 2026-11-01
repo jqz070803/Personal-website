@@ -1,0 +1,23 @@
+# Cloudflare Worker 配置
+# 部署：在本目录执行 wrangler deploy
+
+name = "jqz-digital-twin"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# 普通变量（可以公开）
+[vars]
+# 智谱模型 id。以控制台「模型列表」里显示的名称为准。
+# glm-4-flash 是长期免费的轻量模型；若控制台显示的是
+# GLM-4-Flash-250414 这类带日期的名字，就填完整名，否则会报 400。
+MODEL = "glm-4-flash"
+# 允许跨域的来源，逗号分隔，不要有空格
+ALLOWED_ORIGINS = "https://jqz070803.github.io,http://127.0.0.1:8123,http://localhost:8123"
+
+# 密钥不放这里，用命令行写入：
+#   wrangler secret put ZHIPU_API_KEY
+#
+# 可选：SAFE_MODE = "retrieval"
+#   零模型模式，只返回检索到的资料原文，绝对不可能生成资料以外的内容。
+#   答辩演示或担心出事时可以临时切过去：
+#   wrangler deploy --var SAFE_MODE:retrieval

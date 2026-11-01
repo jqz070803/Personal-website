@@ -3,8 +3,8 @@
 课程项目 **Vibe Coding** 的个人主页。纯静态前端（`HTML + CSS + JS`，无框架、无构建、无依赖），
 直接打开就能跑。
 
-最新版本是 **v3**：在主页之外，还加了一个「问题反馈」板块，访客填写的反馈会直接写进
-Supabase 数据库（姓名 / 设备 / 反馈内容）。
+最新版本是 **v4**：在 v3 的基础上，把「智能体」预留区换成了真正能对话的**数字分身**
+（接入智谱 GLM，带三层边界防护，见 `docs/v4-digital-twin.md`）。
 
 ---
 
@@ -31,7 +31,7 @@ python -m http.server 8123
 .
 ├── v1-web/            # 版本 v1：MVP 主页
 ├── v2-web/            # 版本 v2：「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图
-├── v3-web/            # ★ 版本 v3（最新）：新增「问题反馈」板块，写入 Supabase
+├── v3-web/            # 版本 v3：新增「问题反馈」板块，写入 Supabase
 │   ├── v3-index.html      # 主页面
 │   ├── v3-style.css
 │   ├── v3-script.js
@@ -39,6 +39,14 @@ python -m http.server 8123
 │   ├── supabase-setup.sql # 数据库一键脚本（建表 / 权限 / RLS）
 │   ├── assets/            # 图片、字体、首屏视频
 │   └── tools/             # 背景与视频生成脚本
+├── v4-web/            # ★ 版本 v4（最新）：数字分身
+│   ├── v4-index.html      # 主页面（#agent 换成真实对话框）
+│   ├── v4-persona.js      # 人设卡 + 公开知识库 + 边界规则
+│   ├── v4-agent.js        # 对话逻辑
+│   ├── qa-dataset.json    # 30 道边界与事实测试集
+│   ├── worker/            # 代理层（Cloudflare 版）
+│   ├── server/            # 代理层（国内云函数版：阿里云 FC / 腾讯云 SCF）
+│   └── tools/             # 规则自测脚本
 ├── docs/              # 各版本的迭代进度报告 + 项目记忆库
 ├── artifacts/screenshots/  # 各版本验收截图
 └── .github/workflows/pages.yml  # GitHub Pages 自动部署
@@ -53,6 +61,7 @@ python -m http.server 8123
 | `v1` | MVP 主页 |
 | `v2` | 「学业 · 专业」整页板块 + 视差山峦背景 + 足迹拼图 |
 | `v3` | 「问题反馈」板块（姓名 / 设备 / 反馈内容 → Supabase） |
+| `v4` | 数字分身（智谱 GLM + 三层边界防护 + 双人格切换） |
 
 ## 反馈功能的说明
 

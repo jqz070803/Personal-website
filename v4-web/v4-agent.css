@@ -1,0 +1,541 @@
+/* =========================================================
+   v4-agent.css — 数字分身对话区
+   作用域：全部限定在 #twin 之下，不影响页面其它板块。
+   配色沿用 v4-style.css 的 CSS 变量，保持整站一致。
+   ========================================================= */
+
+#twin {
+  /* 对话区内部专用变量 */
+  --twin-bubble: #16263f;
+  --twin-bubble-me: #1f4d80;
+  --twin-line: rgba(255, 255, 255, 0.09);
+  --twin-gap: 14px;
+}
+
+.twin {
+  background: var(--paper-soft);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 8px);
+  padding: clamp(22px, 4vw, 44px);
+  box-shadow: var(--shadow-soft);
+  color: var(--ink);
+}
+
+/* ---------- ① 起始页 ---------- */
+
+/* hidden 属性必须压得住下面的 display:flex，否则两块会同时露出来 */
+.twin__gate[hidden] { display: none; }
+
+.twin__gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.twin__orb {
+  position: relative;
+  width: clamp(76px, 13vw, 104px);
+  height: clamp(76px, 13vw, 104px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #1d1d1f, #3a3a3c);
+  margin-bottom: 4px;
+}
+
+.twin__core {
+  position: relative;
+  z-index: 2;
+  font-weight: 700;
+  font-size: 1.28rem;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.twin__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(77, 163, 255, 0.42);
+  animation: twin-pulse 2.6s ease-out infinite;
+}
+
+@keyframes twin-pulse {
+  0% { transform: scale(1); opacity: 0.75; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+.twin__gate-title {
+  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.twin__gate-text {
+  color: var(--ink-faint);
+  font-size: 0.95rem;
+  line-height: 1.85;
+  max-width: 520px;
+}
+
+.twin__modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  margin-top: 6px;
+}
+
+.twin__mode {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .22s, background .22s, transform .22s;
+}
+
+.twin__mode strong {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.twin__mode span {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+.twin__mode:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.twin__mode.is-active {
+  border-color: var(--accent);
+  background: rgba(77, 163, 255, 0.10);
+}
+
+.twin__mode.is-active span {
+  color: var(--ink-soft);
+}
+
+.twin__start {
+  margin-top: 8px;
+  padding: 12px 34px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #05131f;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s, opacity .2s;
+}
+
+.twin__start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(77, 163, 255, 0.28);
+}
+
+.twin__gate-note {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  line-height: 1.7;
+  max-width: 460px;
+}
+
+.twin__gate-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.76rem;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.twin__state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6b7684;
+}
+
+.twin__state-dot[data-state="online"] {
+  background: #3ecf8e;
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.16);
+}
+
+.twin__state-dot[data-state="local"] {
+  background: #d0a04a;
+  box-shadow: 0 0 0 3px rgba(208, 160, 74, 0.14);
+}
+
+/* ---------- ② 对话面板 ---------- */
+
+.twin__panel[hidden] { display: none; }
+
+.twin__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.twin__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--twin-line);
+  flex-wrap: wrap;
+}
+
+.twin__avatar {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #1d1d1f, #3a3a3c);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.twin__who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.twin__who b {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.twin__sub {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.twin__switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.twin__switch-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}
+
+.twin__switch-btn.is-active {
+  background: rgba(77, 163, 255, 0.16);
+  color: var(--accent-deep);
+}
+
+.twin__reset {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+
+.twin__reset:hover {
+  color: var(--ink-soft);
+  border-color: var(--line-strong);
+}
+
+/* 消息区 */
+.twin__log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--twin-gap);
+  padding: 20px 2px 16px;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.twin__log::-webkit-scrollbar { width: 6px; }
+.twin__log::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+}
+
+.twin__msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 82%;
+  animation: twin-in .26s ease both;
+}
+
+@keyframes twin-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.twin__msg.is-ai { align-self: flex-start; }
+.twin__msg.is-me { align-self: flex-end; align-items: flex-end; }
+
+.twin__bubble {
+  padding: 11px 15px;
+  border-radius: 16px;
+  font-size: 0.92rem;
+  line-height: 1.78;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--twin-bubble);
+  color: var(--ink);
+  border: 1px solid var(--twin-line);
+}
+
+.twin__msg.is-ai .twin__bubble {
+  border-bottom-left-radius: 6px;
+}
+
+.twin__msg.is-me .twin__bubble {
+  background: var(--twin-bubble-me);
+  border-color: rgba(77, 163, 255, 0.26);
+  border-bottom-right-radius: 6px;
+  color: #eaf3ff;
+}
+
+/* 边界拦截的回复：视觉上做个轻标记，但不喊"敏感" */
+.twin__msg.is-guard .twin__bubble {
+  border-color: rgba(208, 160, 74, 0.30);
+  background: rgba(208, 160, 74, 0.07);
+}
+
+.twin__tag {
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  padding-left: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* 打字指示 */
+.twin__typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.twin__typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  animation: twin-blink 1.2s infinite;
+}
+
+.twin__typing i:nth-child(2) { animation-delay: .18s; }
+.twin__typing i:nth-child(3) { animation-delay: .36s; }
+
+@keyframes twin-blink {
+  0%, 100% { opacity: .25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* 光标 */
+.twin__caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--accent);
+  animation: twin-caret .9s steps(1) infinite;
+}
+
+@keyframes twin-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* 建议问题 */
+.twin__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.twin__chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+
+.twin__chip:hover {
+  color: var(--accent-deep);
+  border-color: rgba(77, 163, 255, 0.4);
+  background: rgba(77, 163, 255, 0.07);
+}
+
+/* 输入区 */
+.twin__input {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  transition: border-color .2s;
+}
+
+.twin__input:focus-within {
+  border-color: rgba(77, 163, 255, 0.45);
+}
+
+.twin__input textarea {
+  flex: 1 1 auto;
+  min-height: 24px;
+  max-height: 120px;
+  padding: 6px 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.twin__input textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+.twin__send {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #05131f;
+  cursor: pointer;
+  transition: opacity .2s, transform .2s;
+}
+
+.twin__send:hover:not(:disabled) { transform: translateY(-1px); }
+
+.twin__send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 常驻免责声明 */
+.twin__disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--twin-line);
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+.twin__disclaimer-mark {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 640px) {
+  .twin {
+    padding: 20px 16px;
+    border-radius: var(--radius);
+  }
+
+  .twin__modes {
+    grid-template-columns: 1fr;
+  }
+
+  .twin__log {
+    max-height: 56vh;
+    padding: 16px 0 12px;
+  }
+
+  .twin__msg {
+    max-width: 90%;
+  }
+
+  .twin__bar {
+    gap: 8px;
+  }
+
+  .twin__switch {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .twin__reset {
+    order: 2;
+  }
+}
+
+/* 尊重「减少动态效果」偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .twin__msg,
+  .twin__pulse,
+  .twin__caret,
+  .twin__typing i {
+    animation: none !important;
+  }
+}
