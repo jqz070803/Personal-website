@@ -438,8 +438,36 @@ docs/
   用同源 iframe + `contentDocument` 读 class/尺寸/computed style，再用 `shot.ps1` 截图查看）。
 - **Python**：**3.14.3 可用**（`python -m http.server 8123` 起静态服务）；**无 PIL**，图像处理请走 PowerShell `System.Drawing`。
 - **Supabase（课程 V3 引入）**：项目 `https://joqhbooccydgajunwnwf.supabase.co`，表 `public.user_feedback`；
-  publishable key 在 `v3-web/v3-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全由 RLS 负责）；
-  建表 / 补列脚本 `v3-web/supabase-setup.sql`（幂等）。
+  publishable key 在 `v4-web/v4-script.js` 顶部常量 `SUPABASE_KEY`（该 key 设计上可公开，安全由 RLS 负责）；
+  建表 / 补列脚本 `v4-web/supabase-setup.sql`（幂等）。
+  > ⚠️ **2026-11-05 诊断：该域名从 DNS 消失（NXDOMAIN），根因已确认 = 项目被 Supabase 暂停（paused），不是被删除。**
+  > 后台原话：「Project "jqz0803@qq.com's Project" is paused. All data, including backups and storage objects,
+  > remains safe. You can resume this project from the dashboard until 30 Oct 2027.」
+  > 本地运营商 DNS（202.96.134.133）、阿里 223.5.5.5、Google 8.8.8.8 三方一致返回「Non-existent domain」，
+  > 而 `supabase.co` 根域解析正常、hosts 无劫持 → 不是本机网络问题，也不是数据库锁。
+  >
+  > **恢复方式：Dashboard 里点 Restore / Resume project，等状态变 Active（约 2–5 分钟）。**
+  > 项目 ref 不变 ⇒ `SUPABASE_URL` / `SUPABASE_KEY` **不需要改**，表 `user_feedback`、数据、RLS 策略全部原样保留。
+  > 恢复后用 `python v4-web/tools/check_feedback.py --write` 验证即可（应四层全绿）。
+  >
+  > ✅ **2026-11-05 17:36 已恢复并验证通过**：`--write` 四层全绿
+  > （DNS → 104.18.38.10 / 读 HTTP 200 / 写 HTTP 201，RLS 正常）。
+  > ⚠️ **恢复有一段"假失败期"，别误判**：DNS 会先回来，但 HTTPS 仍返回 **521（源站未就绪）**，
+  > 实测约 3 分钟后才转 200。521 阶段访客提交仍会失败，属于正常过渡，不是恢复没生效。
+  > 判断依据：`/rest/v1/` 根路径返回 401（Kong 已起）但带 key 的表查询仍是 521 → 等。
+  >
+  > 🛡 **已加保活（2026-11-05）**：`.github/workflows/keepalive.yml` 每天 UTC 03:00（北京 11:00）
+  > 跑一次 `python3 v4-web/tools/check_feedback.py`（只读，不写数据），失败时 job 变红并发邮件告警。
+  > 前提：该文件必须推送到 `main` 才会定时执行；GitHub 的 schedule 在仓库连续 60 天无提交后会自动停用。
+  >
+  > 📌 **会复发**：免费档项目闲置约 7 天会被再次暂停。现已由上面的保活工作流兜住；
+  > 若哪天连 GitHub Actions 也不想依赖，再考虑把反馈写入迁到自建端点（腾讯云函数同域 + 存储）。
+  > 另：暂停期间访客的提交全部失败，但数据不会丢。
+  >
+  > 前端只有 `fetch()` 直接 reject 才会显示「连不上反馈服务器」，所以那句提示指的就是这一层；
+  > 数据库自己的错误会带 HTTP 状态码，显示成「没能提交成功（PGRSTxxx）」。
+  > 自检命令：`python v4-web/tools/check_feedback.py`（加 `--write` 真实插一条测试记录）。
+  > `v3-web/` 为归档版本，仍指向同一项目，恢复后同样可用，无需单独改。
   ⚠️ 该项目的 `/rest/v1/` 根自省端点需要 **secret key**，只有 publishable key 时不要走那里；
   表名 / 列名用 PostgREST 的报错信息反推（例如 hint "Perhaps you meant the table 'public.user_feedback'"、`PGRST204`）。
   ⚠️ 用 PowerShell 发请求时：`curl.exe` 直拼 `?select=*&limit=1` 会被 shell 弄坏（改用 `Invoke-WebRequest` 单引号拼 URL，

@@ -968,11 +968,16 @@
 (function () {
   "use strict";
 
+  /* ⚠️ 换 Supabase 项目时，只需要改下面这两行（外加重跑 supabase-setup.sql）。
+     Project URL      → Supabase 控制台 Settings → API → Project URL，形如 https://<project-ref>.supabase.co
+     publishable key  → 同一页面的 Publishable key，形如 sb_publishable_xxx（设计上可公开） */
   var SUPABASE_URL = "https://joqhbooccydgajunwnwf.supabase.co";
   var SUPABASE_KEY = "sb_publishable_bMqCHijRP26jLk4woTAlnw__qgwra18";
   var TABLE = "user_feedback";
   var DRAFT_KEY = "v3-feedback-draft";
   var MAX_LEN = 1000;
+  var TIMEOUT_MS = 15000; /* 没有超时的话，连接被黑洞时按钮会一直转「提交中…」 */
+  var FALLBACK_MAIL = "jqz0803@qq.com";
 
   var form = document.getElementById("fbForm");
   if (!form) return; /* 页面上没有这张表单（例如旧版页面）就直接跳过 */
@@ -1101,7 +1106,7 @@
 
   /* ---------- 提交到 Supabase（走它的 PostgREST 接口） ---------- */
   function postFeedback(payload) {
-    return window.fetch(SUPABASE_URL + "/rest/v1/" + TABLE, {
+    var opts = {
       method: "POST",
       headers: {
         apikey: SUPABASE_KEY,
@@ -1110,6 +1115,28 @@
         Prefer: "return=minimal"
       },
       body: JSON.stringify(payload)
+    };
+
+    var ctrl = window.AbortController ? new AbortController() : null;
+    if (ctrl) opts.signal = ctrl.signal;
+
+    return new Promise(function (resolve, reject) {
+      var timer = ctrl
+        ? setTimeout(function () {
+            ctrl.abort();
+          }, TIMEOUT_MS)
+        : null;
+
+      window.fetch(SUPABASE_URL + "/rest/v1/" + TABLE, opts).then(
+        function (res) {
+          if (timer) clearTimeout(timer);
+          resolve(res);
+        },
+        function (err) {
+          if (timer) clearTimeout(timer);
+          reject(err);
+        }
+      );
     });
   }
 
@@ -1120,6 +1147,25 @@
     } catch (e) {
       return "";
     }
+  }
+
+  /* 把 fetch 的「网络层异常」翻译成访客看得懂、也方便我们排障的文案。
+     关键区分：走到这里的都还没连上服务器（DNS 解析失败 / CORS 被拦 / 超时 / 离线），
+     跟数据库无关；数据库自己的错误一定带 HTTP 状态码，由调用处的 else 分支处理。 */
+  function describeNetworkError(err) {
+    if (!navigator.onLine) {
+      return "你的设备现在是离线状态，连上网之后再试一次。";
+    }
+    if (err && err.name === "AbortError") {
+      return (
+        "等了 " + Math.round(TIMEOUT_MS / 1000) + " 秒服务器没有响应（连接超时）。" +
+        "可以稍后重试，或直接把内容发到 " + FALLBACK_MAIL + "。"
+      );
+    }
+    return (
+      "连不上反馈服务器（域名解析失败或连接被阻断），不是你的网络问题。" +
+      "可以稍后重试，或直接把内容发到 " + FALLBACK_MAIL + "。"
+    );
   }
 
   /* ---------- 事件绑定 ---------- */
@@ -1178,14 +1224,22 @@
           setStatus("收到啦，谢谢你花时间写这些。", "ok");
         } else {
           var code = parseError(r.body);
+          /* 有状态码说明服务器已经应答了：问题在数据库/权限侧，不是网络。
+             把原始响应留在控制台，排障时不用再猜。 */
+          if (window.console && console.warn) {
+            console.warn("[feedback] 服务器返回 " + r.status, r.body);
+          }
           setStatus(
-            "没能提交成功（" + (code || "HTTP " + r.status) + "）。如果一直失败，也欢迎直接发邮件给我。",
+            "没能提交成功（" + (code || "HTTP " + r.status) + "）。如果一直失败，也欢迎发邮件到 " + FALLBACK_MAIL + "。",
             "err"
           );
         }
       })
-      .catch(function () {
-        setStatus("网络好像不太顺，没能发出去。请稍后再试一次。", "err");
+      .catch(function (err) {
+        if (window.console && console.warn) {
+          console.warn("[feedback] 网络层失败（未连上服务器）", err);
+        }
+        setStatus(describeNetworkError(err), "err");
       })
       .then(function () {
         lock(false);

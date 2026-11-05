@@ -1,0 +1,40 @@
+name: Supabase 保活（防止免费项目被暂停）
+
+# 为什么需要它：
+#   Supabase 免费版项目约 7 天没有任何 API 活动就会被自动暂停。
+#   暂停后域名被回收（DNS 直接 NXDOMAIN）、源站返回 521，网站上的「问题反馈」失效，
+#   而且前端只会显示「连不上反馈服务器」，很难第一眼看出是账号侧的问题。
+#
+#   这个工作流每天对 user_feedback 发一次只读查询，让项目保持 Active，
+#   同时顺便把 DNS / HTTPS / 表权限整条链路体检一遍。
+#
+# 注意：
+#   1. 定时任务只在 main 分支上生效，本文件必须先推送上去；
+#   2. GitHub 的 schedule 在仓库连续 60 天没有提交后会自动停用，
+#      担心的话就去 Actions 页面点一次 Run workflow 重新激活；
+#   3. 请求失败时 job 会变红并给你发邮件 —— 那就是该去 Dashboard 恢复了。
+
+on:
+  schedule:
+    # UTC 03:00 = 北京时间 11:00，每天一次
+    - cron: "0 3 * * *"
+  # 支持手动触发，推送后可以立刻点一次验证
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 取出仓库
+        uses: actions/checkout@v4
+
+      - name: 查询一次 user_feedback（只读）
+        run: |
+          python3 v4-web/tools/check_feedback.py || {
+            echo "::error::保活失败。项目可能又被暂停了，去 Supabase Dashboard 点 Restore project 恢复。"
+            exit 1
+          }
